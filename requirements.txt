@@ -1,4 +1,0 @@
-yfinance
-ta
-requests
-numpy
