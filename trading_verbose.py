@@ -223,8 +223,6 @@ resultados = [r for r in resultados if r]
 print(f"📊 Total de símbolos con resultados válidos: {len(resultados)}")
 if not resultados:
     mensaje = "No se pudo analizar ningún activo."
-    print("🚀 Enviando mensaje a Telegram...")
-    enviar_mensaje_telegram(BOT_TOKEN, CHAT_ID, mensaje)
 else:
     mejor = max(resultados, key=lambda r: max(r["score_bajista"], r["score_alcista"]))
     tipo = "corto" if mejor["score_bajista"] >= mejor["score_alcista"] else "largo"
@@ -243,7 +241,7 @@ else:
     )
 
     print("🧠 Generando mensaje de alerta...")
-    mensaje = f'''
+mensaje = f'''
 OPORTUNIDAD DESTACADA: {mejor['ticker']}
 Precio: {mejor['precio']} USD
 RSI: {mejor['rsi']}
@@ -275,5 +273,6 @@ Con base en los siguientes datos técnicos para {mejor['ticker']}:
 - Soporte: {mejor['soporte']}, Resistencia: {mejor['resistencia']}
 ¿Consideras que es una buena oportunidad para entrar en {'compra' if tipo == 'largo' else 'venta'}? Justifica brevemente.
 '''
-    print("🚀 Enviando mensaje a Telegram...")
-    enviar_mensaje_telegram(BOT_TOKEN, CHAT_ID, mensaje)
+
+        print("🚀 Enviando mensaje a Telegram...")
+enviar_mensaje_telegram(BOT_TOKEN, CHAT_ID, mensaje)
