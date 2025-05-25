@@ -43,6 +43,30 @@ def tiempo_desde_ultima_alerta():
         print(f"⚠️ Error leyendo archivo de alerta: {e}")
         return 9999
 
+LOG_RESUMEN = "ultimo_resumen.json"
+
+def registrar_resumen():
+    try:
+        with open(LOG_RESUMEN, "w") as f:
+            json.dump({"ultimo": datetime.utcnow().isoformat()}, f)
+    except Exception as e:
+        print(f"⚠️ No se pudo registrar el resumen: {e}")
+
+def tiempo_desde_ultimo_resumen():
+    path = Path(LOG_RESUMEN)
+    if not path.exists():
+        return 9999
+    try:
+        with open(path, "r") as f:
+            data = json.load(f)
+        ultimo = datetime.fromisoformat(data.get("ultimo", "2000-01-01T00:00:00"))
+        delta = (datetime.utcnow() - ultimo).total_seconds() / 60
+        print(f"📊 Último resumen enviado hace {int(delta)} minutos.")
+        return delta
+    except Exception as e:
+        print(f"⚠️ Error leyendo archivo de resumen: {e}")
+        return 9999
+
 def encontrar_soporte_resistencia(close, periodo=14):
     soporte = min(close[-periodo:])
     resistencia = max(close[-periodo:])
@@ -291,8 +315,18 @@ if es_mercado_abierto():
         img_path = generar_grafico(mejor["df"], mejor["ticker"])
         enviar_imagen(img_path)
     else:
-        minutos = tiempo_desde_ultima_alerta()
-        minutos_resumen = tiempo_desde_ultimo_resumen()
+        minutos_alerta = tiempo_desde_ultima_alerta()
+minutos_resumen = tiempo_desde_ultimo_resumen()
+
+if minutos_alerta >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= TIEMPO_RESUMEN_MINUTOS:
+    resumen = "⏱ *Sin alertas en los últimos 30 minutos.*\n\n*Probabilidades actuales:*\n\n"
+    for c in candidatos:
+        resumen += f"{c['ticker']}: 📈 {c['intradia']['prob_sube']}% subida | 📉 {c['intradia']['prob_baja']}% bajada\n"
+    enviar_telegram(resumen)
+    registrar_resumen()
+else:
+    print("🕒 Aún dentro del margen de espera para resumen.")
+
         if minutos >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= TIEMPO_RESUMEN_MINUTOS:
             resumen = "⏱ *Sin alertas en los últimos 30 minutos.*\n\n*Probabilidades actuales:*\n\n"
             for c in candidatos:
