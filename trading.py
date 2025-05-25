@@ -8,11 +8,9 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-# 📁 Usar lexicón local, evita descarga desde internet
-os.environ['NLTK_DATA'] = './nltk_data'
-
+# ⚙️ Usar lexicón local desde la raíz del proyecto
 def cargar_analizador_personalizado():
-    lexicon_path = './nltk_data/vader_lexicon.txt'
+    lexicon_path = './vader_lexicon.txt'
     return SentimentIntensityAnalyzer(lexicon_file=lexicon_path)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -162,7 +160,7 @@ def analizar_ticker(ticker):
         "resistencia": resistencia
     }
 
-# 🧠 EJECUCIÓN PRINCIPAL
+# 🚀 Ejecución principal
 resultados = [analizar_ticker(sym) for sym in symbols]
 resultados = [r for r in resultados if r]
 
@@ -229,5 +227,4 @@ Con base en los siguientes datos técnicos para {mejor['ticker']}:
         print("✅ Alerta enviada correctamente")
     else:
         print("❌ Error al enviar alerta:", response.text)
-
 
