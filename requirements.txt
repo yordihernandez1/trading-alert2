@@ -1,7 +1,0 @@
-yfinance
-ta
-requests
-numpy
-pandas
-beautifulsoup4
-nltk
