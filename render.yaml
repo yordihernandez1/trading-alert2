@@ -1,0 +1,7 @@
+services:
+  - type: cron
+    name: trading-alerts
+    env: python
+    schedule: "30 13 * * *"  # ejecuta cada día a las 13:30 UTC
+    buildCommand: pip install -r requirements.txt
+    startCommand: python trading_verbose.py
