@@ -161,13 +161,17 @@ def analizar_intradía(ticker):
         return None, None
 
 def enviar_telegram(mensaje):
-            registrar_alerta()
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-    payload = {"chat_id": CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": mensaje,
+        "parse_mode": "Markdown"
+    }
     try:
         requests.post(url, data=payload, timeout=10)
     except Exception as e:
         print("⚠️ Error enviando mensaje:", e)
+
 
 def enviar_imagen(path):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
