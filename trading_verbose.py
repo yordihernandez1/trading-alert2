@@ -16,7 +16,7 @@ CHAT_ID = os.environ.get("CHAT_ID")
 SYMBOLS = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
-UMBRAL_ALERTA = 50
+UMBRAL_ALERTA = 0
 LOG_ALERTA = "ultima_alerta.json"
 TIEMPO_RESUMEN_MINUTOS = 30
 
@@ -278,7 +278,8 @@ if es_mercado_abierto():
         if mejor["prob_total"] >= UMBRAL_ALERTA:
             titulares = get_news_headlines(mejor["ticker"])
             resumen_noticia = analizar_sentimiento_vader(titulares)
-            entrada = mejor["diario"]["precio"]
+
+        entrada = mejor["diario"]["precio"]
 
         if mejor["intradia"]["direccion"] == "subida":
             stop = mejor["diario"]["soporte"]
