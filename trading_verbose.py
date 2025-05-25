@@ -295,7 +295,7 @@ if es_mercado_abierto():
             if minutos >= TIEMPO_RESUMEN_MINUTOS:
                 resumen = "⏱ *Sin alertas en los últimos 30 minutos.*\\n\\n*Probabilidades actuales:*\\n\\n"
                 for c in candidatos:
-                    resumen += f"{c['ticker']}: 📈 {c['intradia']['prob_sube']}% subida | 📉 {c['intradia']['prob_baja']}% bajada\\n"
+                    resumen += f"{c['ticker']}: 📈 {c['intradia']['prob_sube']}% subida | 📉 {c['intradia']['prob_baja']}% bajada\\n'
                 enviar_telegram(resumen)
             else:
                 print("🕒 Aún dentro del margen de espera para resumen.")
