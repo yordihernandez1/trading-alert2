@@ -2,71 +2,138 @@ import os
 import yfinance as yf
 import ta
 import requests
+from datetime import datetime
+import numpy as np
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = int(os.environ.get("CHAT_ID"))
-TICKER = "AAPL"
+
+# Solo enviar mensaje entre 14:00 y 21:00 UTC
+hora_utc = datetime.utcnow().hour
+if hora_utc < 14 or hora_utc >= 21:
+    print("⏱️ Fuera del horario de envío. No se envía mensaje.")
+    exit()
+
+symbols = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
 
-try:
-    data = yf.download(TICKER, period="3mo", interval="1d")
-except Exception as e:
-    print("❌ Error al descargar datos:", e)
-    exit()
+def detectar_tendencia(close):
+    if close[-1] > close[-10]:
+        return "Alcista"
+    elif close[-1] < close[-10]:
+        return "Bajista"
+    else:
+        return "Lateral"
 
-if data.empty:
-    print(f"❌ No se encontraron datos para {TICKER}")
-    exit()
+def analizar_ticker(ticker):
+    try:
+        data = yf.download(ticker, period="3mo", interval="1d")
+        if data.empty or len(data) < 20:
+            return None
+    except:
+        return None
 
-close = data["Close"].squeeze()
-data["rsi"] = ta.momentum.RSIIndicator(close=close).rsi()
-macd = ta.trend.MACD(close=close)
-data["macd"] = macd.macd()
-data["macd_signal"] = macd.macd_signal()
-data["sma_50"] = ta.trend.SMAIndicator(close=close, window=50).sma_indicator()
-data["sma_200"] = ta.trend.SMAIndicator(close=close, window=200).sma_indicator()
+    close = data["Close"].squeeze()
+    data["rsi"] = ta.momentum.RSIIndicator(close=close).rsi()
+    macd = ta.trend.MACD(close=close)
+    data["macd"] = macd.macd()
+    data["macd_signal"] = macd.macd_signal()
+    data["sma_50"] = ta.trend.SMAIndicator(close=close, window=50).sma_indicator()
+    data["sma_200"] = ta.trend.SMAIndicator(close=close, window=200).sma_indicator()
+    data["atr"] = ta.volatility.AverageTrueRange(high=data["High"], low=data["Low"], close=close).average_true_range()
 
-try:
-    rsi = data["rsi"].iloc[-1].item()
-    macd_val = data["macd"].iloc[-1].item()
-    macd_sig = data["macd_signal"].iloc[-1].item()
-    sma_50 = data["sma_50"].iloc[-1].item()
-    sma_200 = data["sma_200"].iloc[-1].item()
-    precio = data["Close"].iloc[-1].item()
-    cierre_anterior = data["Close"].iloc[-2].item()
-except Exception as e:
-    print("❌ Error al leer indicadores:", e)
-    exit()
+    try:
+        rsi = data["rsi"].iloc[-1]
+        macd_val = data["macd"].iloc[-1]
+        macd_sig = data["macd_signal"].iloc[-1]
+        sma_50 = data["sma_50"].iloc[-1]
+        sma_200 = data["sma_200"].iloc[-1]
+        atr = data["atr"].iloc[-1]
+        precio = data["Close"].iloc[-1]
+        cierre_anterior = data["Close"].iloc[-2]
+    except:
+        return None
 
-señales = []
+    señales_bajistas = []
+    señales_alcistas = []
+    score_bajista = 0
+    score_alcista = 0
 
-if rsi > RSI_SOBRECOMPRA:
-    señales.append("RSI elevado → posible sobrecompra")
-elif rsi < RSI_SOBREVENTA:
-    señales.append("RSI bajo → posible sobreventa")
+    if rsi > RSI_SOBRECOMPRA:
+        señales_bajistas.append("RSI elevado → posible sobrecompra")
+        score_bajista += 1
+    if macd_val < macd_sig:
+        señales_bajistas.append("MACD cruzando a la baja")
+        score_bajista += 1
+    if precio < sma_50:
+        señales_bajistas.append("Precio por debajo de la SMA 50")
+        score_bajista += 1
+    if sma_50 < sma_200:
+        señales_bajistas.append("SMA 50 por debajo de SMA 200")
+        score_bajista += 1
+    if precio < cierre_anterior:
+        señales_bajistas.append("Última vela cerró en rojo")
+        score_bajista += 1
+
+    if rsi < RSI_SOBREVENTA:
+        señales_alcistas.append("RSI bajo → posible sobreventa")
+        score_alcista += 1
+    if macd_val > macd_sig:
+        señales_alcistas.append("MACD cruzando al alza")
+        score_alcista += 1
+    if precio < sma_50 and sma_50 < sma_200:
+        señales_alcistas.append("Precio bajo con posible recuperación (por debajo de SMAs)")
+        score_alcista += 1
+    if precio > cierre_anterior:
+        señales_alcistas.append("Última vela cerró en verde")
+        score_alcista += 1
+
+    tendencia = detectar_tendencia(close)
+    retorno_7d = ((close[-1] / close[-7]) - 1) * 100
+    volatilidad = np.std(close[-14:]) / close[-1] * 100
+
+    return {
+        "ticker": ticker,
+        "precio": round(precio, 2),
+        "rsi": round(rsi, 2),
+        "score_bajista": score_bajista,
+        "score_alcista": score_alcista,
+        "señales_bajistas": señales_bajistas,
+        "señales_alcistas": señales_alcistas,
+        "tendencia": tendencia,
+        "retorno_7d": round(retorno_7d, 2),
+        "volatilidad": round(volatilidad, 2),
+        "atr": round(atr, 2)
+    }
+
+resultados = [analizar_ticker(sym) for sym in symbols]
+resultados = [r for r in resultados if r]
+
+if not resultados:
+    mensaje = "❌ No se pudo analizar ningún activo."
 else:
-    señales.append("RSI normal → No está ni en sobreventa ni en sobrecompra")
+    mejor = max(resultados, key=lambda r: max(r["score_bajista"], r["score_alcista"]))
+    tipo = "corto 🔻" if mejor["score_bajista"] >= mejor["score_alcista"] else "largo 🚀"
+    señales = mejor["señales_bajistas"] if tipo.startswith("corto") else mejor["señales_alcistas"]
 
-if macd_val < macd_sig:
-    señales.append("MACD cruzando a la baja")
-if precio < sma_50:
-    señales.append("Precio por debajo de la SMA 50")
-if sma_50 < sma_200:
-    señales.append("SMA 50 por debajo de SMA 200 → tendencia bajista")
-if precio < cierre_anterior:
-    señales.append("Última vela cerró en rojo")
+    mensaje = f"""
+📊 OPORTUNIDAD DESTACADA: {mejor['ticker']}
+💰 Precio: {mejor['precio']} USD
+📈 RSI: {mejor['rsi']}
 
-mensaje = (
-    f"📉 ANÁLISIS TÉCNICO – {TICKER}\n\n"
-    f"💰 Precio: {round(precio, 2)} USD\n"
-    f"📊 RSI: {round(rsi, 2)}\n"
-    f"📈 MACD: {round(macd_val, 2)} / Señal: {round(macd_sig, 2)}\n"
-    f"📉 SMA 50: {round(sma_50, 2)}\n"
-    f"📉 SMA 200: {round(sma_200, 2)}\n\n"
-    f"📌 Señales detectadas:\n" + "\n".join("- " + s for s in señales) + "\n\n"
-    "¿Es buen momento para una entrada en corto?"
-)
+📌 Entrada sugerida: en {tipo}
+
+🔍 Análisis técnico cualitativo:
+- Tendencia general: {mejor['tendencia']}
+
+📉 Datos cuantitativos:
+- Volatilidad 14d: {mejor['volatilidad']}%
+- Retorno 7d: {mejor['retorno_7d']}%
+- ATR: {mejor['atr']}
+
+📌 Señales detectadas:
+""" + "\n".join(f"- {s}" for s in señales)
 
 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 payload = {
@@ -76,6 +143,6 @@ payload = {
 response = requests.post(url, data=payload)
 
 if response.status_code == 200:
-    print("✅ Mensaje enviado correctamente")
+    print("✅ Alerta enviada correctamente")
 else:
-    print("❌ Error al enviar mensaje:", response.text)
+    print("❌ Error al enviar alerta:", response.text)
