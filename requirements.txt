@@ -2,6 +2,6 @@ yfinance
 ta
 requests
 numpy
+pandas
 beautifulsoup4
-transformers
-torch
+nltk
