@@ -263,9 +263,9 @@ if es_mercado_abierto():
             stop = mejor["diario"]["resistencia"]
             take_profit = entrada - (stop - entrada) * 2
 
-entrada = round(entrada, 2)
-stop = round(stop, 2)
-take_profit = round(take_profit, 2)
+            entrada = round(entrada, 2)
+            stop = round(stop, 2)
+            take_profit = round(take_profit, 2)
             mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
 {'🟢 Largo' if mejor['intradia']['direccion'] == 'subida' else '🔴 Corto'}
 
