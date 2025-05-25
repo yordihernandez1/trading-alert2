@@ -1,8 +1,3 @@
-"""
-Sistema de alertas técnico completo (diario + intradía)
-Incluye resumen automático si no se detectan señales en 30 minutos.
-"""
-
 import os
 import yfinance as yf
 import ta
