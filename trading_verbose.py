@@ -160,7 +160,7 @@ def analizar_intradía(ticker):
         print(f"❌ Error intradía {ticker}: {e}")
         return None, None
 
-def enviar_telegram(mensaje)
+def enviar_telegram(mensaje):
             registrar_alerta():
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
