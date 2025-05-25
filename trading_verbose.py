@@ -49,14 +49,14 @@ def analizar_ticker(ticker):
         df = yf.download(ticker, period="3mo", interval="1d", auto_adjust=True, progress=False)
         if df.empty or len(df) < 50:
             return None
-        close = df["Close"]
-        high = df["High"]
-        low = df["Low"]
-        rsi = ta.momentum.RSIIndicator(close).rsi()
-        macd = ta.trend.MACD(close)
-        sma_50 = ta.trend.SMAIndicator(close, window=50).sma_indicator()
-        sma_200 = ta.trend.SMAIndicator(close, window=200).sma_indicator()
-        atr = ta.volatility.AverageTrueRange(high, low, close).average_true_range()
+        close = df["Close"].squeeze()
+        high = df["High"].squeeze()
+        low = df["Low"].squeeze()
+        rsi = ta.momentum.RSIIndicator(close.squeeze()).rsi()
+        macd = ta.trend.MACD(close.squeeze())
+        sma_50 = ta.trend.SMAIndicator(close.squeeze(), window=50).sma_indicator()
+        sma_200 = ta.trend.SMAIndicator(close.squeeze(), window=200).sma_indicator()
+        atr = ta.volatility.AverageTrueRange(high.squeeze(), low.squeeze(), close.squeeze()).average_true_range()
     except Exception as e:
         print(f"❌ Error analizando {ticker}: {e}")
         return None
@@ -146,3 +146,4 @@ Entrada sugerida: en *{tipo}*
 _Sentimiento: {sentimiento}_"""
 
     enviar_telegram(mensaje)
+
