@@ -89,13 +89,13 @@ def analizar_tecnico_diario(ticker):
 def analizar_intradía(ticker):
     try:
         df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
-        if df.empty or len(df) < 30 or float(df["Volume"].iloc[-1]) == 0:
+        if df.empty or len(df) < 30 or df["Volume"].squeeze().iloc[-1].item() == 0:
             return None, None
 
-        close = df["Close"]
-        low = df["Low"]
-        high = df["High"]
-        volume = df["Volume"]
+        close = df["Close"].squeeze()
+        low = df["Low"].squeeze()
+        high = df["High"].squeeze()
+        volume = df["Volume"].squeeze()
 
         ema9 = ta.trend.EMAIndicator(close, window=9).ema_indicator()
         ema21 = ta.trend.EMAIndicator(close, window=21).ema_indicator()
