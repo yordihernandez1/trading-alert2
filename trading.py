@@ -4,12 +4,13 @@ import ta
 import requests
 import numpy as np
 import pandas as pd
+import nltk
 from datetime import datetime
 from bs4 import BeautifulSoup
-from transformers import pipeline
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-# 📦 Modelo local de análisis de sentimiento
-sentiment_model = pipeline("sentiment-analysis")
+# Descargar diccionario de VADER (solo la primera vez)
+nltk.download('vader_lexicon')
 
 # ✅ Configuración
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -19,12 +20,12 @@ symbols = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
 
-# 🕐 Ventana para añadir noticias
+# 🕐 Ventana para análisis de noticias
 def es_ventana_de_noticias():
     ahora = datetime.utcnow()
     return ahora.hour == 13 and 30 <= ahora.minute <= 35
 
-# 📥 Noticias y análisis de sentimiento
+# 📰 Scraping de titulares
 def get_news_headlines(ticker, num_headlines=3):
     query = f"{ticker} stock"
     url = f"https://www.google.com/search?q={query}&tbm=nws"
@@ -37,13 +38,23 @@ def get_news_headlines(ticker, num_headlines=3):
     except:
         return []
 
-def analizar_sentimiento(titulares):
+# 🧠 Análisis de sentimiento con VADER
+def analizar_sentimiento_vader(titulares):
     if not titulares:
         return "Sin noticias recientes."
-    resultados = sentiment_model(titulares)
-    positivos = sum(1 for r in resultados if r["label"] == "POSITIVE")
-    negativos = sum(1 for r in resultados if r["label"] == "NEGATIVE")
-    sentimiento = "Positivo" if positivos > negativos else "Negativo" if negativos > positivos else "Neutro"
+
+    analizador = SentimentIntensityAnalyzer()
+    textos = " ".join(titulares)
+    scores = analizador.polarity_scores(textos)
+    compound = scores['compound']
+
+    if compound >= 0.05:
+        sentimiento = "Positivo"
+    elif compound <= -0.05:
+        sentimiento = "Negativo"
+    else:
+        sentimiento = "Neutro"
+
     resumen = "; ".join(titulares[:2])
     return f"{resumen}\nSentimiento general: {sentimiento}"
 
@@ -214,7 +225,7 @@ def analizar_backtest(ticker, dias_salida=5):
         "porcentaje_ganadores": round((resultados > 0).mean() * 100, 2)
     }
 
-# 🚀 Ejecutar
+# 🚀 Ejecución principal
 resultados = [analizar_ticker(sym) for sym in symbols]
 resultados = [r for r in resultados if r]
 
@@ -227,11 +238,10 @@ else:
 
     if es_ventana_de_noticias():
         titulares = get_news_headlines(mejor["ticker"])
-        resumen_noticia = analizar_sentimiento(titulares)
+        resumen_noticia = analizar_sentimiento_vader(titulares)
     else:
         resumen_noticia = "🕓 Análisis de noticias disponible a las 13:30 UTC."
 
-    # 📊 Backtest para todos los activos
     backtests = [analizar_backtest(sym) for sym in symbols]
     backtests = [r for r in backtests if r]
     resumen_backtest = "\n".join(
@@ -264,7 +274,6 @@ else:
 {resumen_backtest}
 """
 
-    # Enviar mensaje
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
