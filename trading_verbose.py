@@ -161,7 +161,7 @@ def analizar_intradía(ticker):
         return None, None
 
 def enviar_telegram(mensaje):
-            registrar_alerta():
+            registrar_alerta()
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
     try:
