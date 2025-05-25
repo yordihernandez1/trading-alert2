@@ -290,7 +290,7 @@ if es_mercado_abierto():
             registrar_alerta()
             img_path = generar_grafico(mejor["df"], mejor["ticker"])
             enviar_imagen(img_path)
-        else:
+    else:
             minutos = tiempo_desde_ultima_alerta()
             if minutos >= TIEMPO_RESUMEN_MINUTOS:
                 resumen = "⏱ *Sin alertas en los últimos 30 minutos.*\\n\\n*Probabilidades actuales:*\\n\\n"
