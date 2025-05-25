@@ -49,8 +49,7 @@ def analizar_sentimiento_vader(titulares):
     score = sia.polarity_scores(text)["compound"]
     sentimiento = "Positivo" if score >= 0.05 else "Negativo" if score <= -0.05 else "Neutro"
     resumen = "; ".join(titulares[:2])
-    return f"{resumen}
-Sentimiento general: {sentimiento}"
+    return f"{resumen}\nSentimiento general: {sentimiento}"
 
 def analizar_tecnico_diario(ticker):
     try:
