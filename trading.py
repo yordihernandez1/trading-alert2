@@ -5,22 +5,24 @@ import requests
 from datetime import datetime
 import numpy as np
 from bs4 import BeautifulSoup
-from transformers import pipeline  # 🆕
+from transformers import pipeline
 
-# 🎯 Modelo local de sentimiento
+# 📦 Modelo local de análisis de sentimiento
 sentiment_model = pipeline("sentiment-analysis")
 
+# 🧾 Configuración de entorno
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = int(os.environ.get("CHAT_ID"))
 
-hora_utc = datetime.utcnow().hour
-if hora_utc < 14 or hora_utc >= 21:
-    print("⏱️ Fuera del horario de envío. No se envía mensaje.")
-    exit()
-
+# 📍 Lista de activos a analizar
 symbols = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
+
+# 🕐 Función: ¿es momento de incluir noticias?
+def es_ventana_de_noticias():
+    ahora = datetime.utcnow()
+    return ahora.hour == 13 and 30 <= ahora.minute <= 35
 
 def detectar_tendencia(close):
     try:
@@ -149,7 +151,7 @@ def analizar_sentimiento(titulares):
     resumen = "; ".join(titulares[:2])
     return f"{resumen}\nSentimiento general: {sentimiento}"
 
-# 🔍 Análisis técnico
+# 🔍 Ejecutar análisis técnico
 resultados = [analizar_ticker(sym) for sym in symbols]
 resultados = [r for r in resultados if r]
 
@@ -160,9 +162,12 @@ else:
     tipo = "corto 🔻" if mejor["score_bajista"] >= mejor["score_alcista"] else "largo 🚀"
     señales = mejor["señales_bajistas"] if tipo.startswith("corto") else mejor["señales_alcistas"]
 
-    # 📰 Añadir análisis de noticias
-    titulares = get_news_headlines(mejor["ticker"])
-    resumen_noticia = analizar_sentimiento(titulares)
+    # 📩 Incluir análisis de noticias solo en la ventana adecuada
+    if es_ventana_de_noticias():
+        titulares = get_news_headlines(mejor["ticker"])
+        resumen_noticia = analizar_sentimiento(titulares)
+    else:
+        resumen_noticia = "🕓 Análisis de noticias disponible a las 13:30 UTC."
 
     mensaje = f"""
 📊 OPORTUNIDAD DESTACADA: {mejor['ticker']}
@@ -186,7 +191,7 @@ else:
 {resumen_noticia}
 """
 
-# 📤 Envío a Telegram
+# 🚀 Enviar mensaje por Telegram
 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 payload = {
     "chat_id": CHAT_ID,
