@@ -8,7 +8,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-# 🔧 Cargar VADER desde archivo local
+# 📌 VADER desde archivo local
 class CustomSentimentIntensityAnalyzer(SentimentIntensityAnalyzer):
     def __init__(self):
         lexicon_path = os.path.join(os.path.dirname(__file__), "vader_lexicon.txt")
@@ -17,14 +17,14 @@ class CustomSentimentIntensityAnalyzer(SentimentIntensityAnalyzer):
 def cargar_analizador_personalizado():
     return CustomSentimentIntensityAnalyzer()
 
-# 🛠️ Configuración desde variables de entorno
+# 🔐 Variables de entorno
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-CHAT_ID = int(os.environ.get("CHAT_ID"))
+CHAT_ID = os.environ.get("CHAT_ID")
 
 if not BOT_TOKEN or not CHAT_ID:
-    raise ValueError("BOT_TOKEN y/o CHAT_ID no definidos como variables de entorno")
+    raise ValueError("Faltan BOT_TOKEN o CHAT_ID en las variables de entorno")
 
-# 📈 Símbolos a analizar
+# 🧪 Lista de activos
 symbols = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
@@ -38,7 +38,7 @@ def get_news_headlines(ticker, num_headlines=3):
     url = f"https://www.google.com/search?q={query}&tbm=nws"
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(response.text, 'html.parser')
         headlines = [
             g.select_one('div.JheGif.nDgy9d').text
@@ -46,7 +46,7 @@ def get_news_headlines(ticker, num_headlines=3):
             if g.select_one('div.JheGif.nDgy9d')
         ]
         return headlines
-    except Exception:
+    except:
         return []
 
 def analizar_sentimiento_vader(titulares):
@@ -55,28 +55,21 @@ def analizar_sentimiento_vader(titulares):
     analizador = cargar_analizador_personalizado()
     textos = " ".join(titulares)
     scores = analizador.polarity_scores(textos)
-    compound = scores['compound']
-    if compound >= 0.05:
-        sentimiento = "Positivo"
-    elif compound <= -0.05:
-        sentimiento = "Negativo"
-    else:
-        sentimiento = "Neutro"
+    compound = scores["compound"]
+    sentimiento = (
+        "Positivo" if compound >= 0.05
+        else "Negativo" if compound <= -0.05
+        else "Neutro"
+    )
     resumen = "; ".join(titulares[:2])
     return f"{resumen}\nSentimiento general: {sentimiento}"
 
 def detectar_tendencia(close):
-    try:
-        val_actual = float(close.iloc[-1])
-        val_antiguo = float(close.iloc[-10])
-        if val_actual > val_antiguo:
-            return "Alcista"
-        elif val_actual < val_antiguo:
-            return "Bajista"
-        else:
-            return "Lateral"
-    except Exception:
-        return "Desconocida"
+    if len(close) < 10:
+        return "Insuficiente"
+    actual = float(close.iloc[-1])
+    pasado = float(close.iloc[-10])
+    return "Alcista" if actual > pasado else "Bajista" if actual < pasado else "Lateral"
 
 def encontrar_soporte_resistencia(close, periodo=14):
     soporte = min(close[-periodo:])
@@ -85,38 +78,40 @@ def encontrar_soporte_resistencia(close, periodo=14):
 
 def analizar_ticker(ticker):
     try:
-        data = yf.download(ticker, period="3mo", interval="1d", progress=False)
-        if data.empty or len(data) < 20:
+        df = yf.download(ticker, period="3mo", interval="1d", progress=False)
+        if df.empty or len(df) < 20:
             return None
-    except Exception:
-        return None
-
-    if any(col not in data.columns for col in ["High", "Low", "Close"]):
-        return None
-
-    close = data["Close"]
-    data["rsi"] = ta.momentum.RSIIndicator(close).rsi()
-    macd = ta.trend.MACD(close)
-    data["macd"] = macd.macd()
-    data["macd_signal"] = macd.macd_signal()
-    data["sma_50"] = ta.trend.SMAIndicator(close, window=50).sma_indicator()
-    data["sma_200"] = ta.trend.SMAIndicator(close, window=200).sma_indicator()
-
-    try:
-        atr = ta.volatility.AverageTrueRange(
-            high=data["High"], low=data["Low"], close=close
-        ).average_true_range().iloc[-1]
     except:
-        atr = np.nan
+        return None
+
+    if any(col not in df.columns for col in ["High", "Low", "Close"]):
+        return None
+
+    close = df["Close"]
+    high = df["High"]
+    low = df["Low"]
 
     try:
-        rsi = float(data["rsi"].iloc[-1])
-        macd_val = float(data["macd"].iloc[-1])
-        macd_sig = float(data["macd_signal"].iloc[-1])
-        sma_50 = float(data["sma_50"].iloc[-1])
-        sma_200 = float(data["sma_200"].iloc[-1])
-        precio = float(data["Close"].iloc[-1])
-        cierre_anterior = float(data["Close"].iloc[-2])
+        rsi = ta.momentum.RSIIndicator(close=close).rsi().squeeze()
+        macd_obj = ta.trend.MACD(close=close)
+        macd = macd_obj.macd().squeeze()
+        macd_signal = macd_obj.macd_signal().squeeze()
+        sma_50 = ta.trend.SMAIndicator(close=close, window=50).sma_indicator().squeeze()
+        sma_200 = ta.trend.SMAIndicator(close=close, window=200).sma_indicator().squeeze()
+        atr = ta.volatility.AverageTrueRange(high=high, low=low, close=close).average_true_range().squeeze()
+    except:
+        return None
+
+    # Evitar errores si faltan datos recientes
+    try:
+        precio = float(close.iloc[-1])
+        cierre_ant = float(close.iloc[-2])
+        rsi_val = float(rsi.iloc[-1])
+        macd_val = float(macd.iloc[-1])
+        macd_sig_val = float(macd_signal.iloc[-1])
+        sma_50_val = float(sma_50.iloc[-1])
+        sma_200_val = float(sma_200.iloc[-1])
+        atr_val = float(atr.iloc[-1])
     except:
         return None
 
@@ -125,32 +120,32 @@ def analizar_ticker(ticker):
     score_bajista = 0
     score_alcista = 0
 
-    if rsi > RSI_SOBRECOMPRA:
+    if rsi_val > RSI_SOBRECOMPRA:
         señales_bajistas.append("RSI en sobrecompra → posible venta")
         score_bajista += 1
-    if macd_val < macd_sig:
+    if macd_val < macd_sig_val:
         señales_bajistas.append("MACD cruzando a la baja")
         score_bajista += 1
-    if precio < sma_50:
+    if precio < sma_50_val:
         señales_bajistas.append("Precio por debajo de la SMA 50")
         score_bajista += 1
-    if sma_50 < sma_200:
+    if sma_50_val < sma_200_val:
         señales_bajistas.append("SMA 50 por debajo de SMA 200")
         score_bajista += 1
-    if precio < cierre_anterior:
+    if precio < cierre_ant:
         señales_bajistas.append("Última vela cerró en rojo")
         score_bajista += 1
 
-    if rsi < RSI_SOBREVENTA:
+    if rsi_val < RSI_SOBREVENTA:
         señales_alcistas.append("RSI en sobreventa → posible compra")
         score_alcista += 1
-    if macd_val > macd_sig:
+    if macd_val > macd_sig_val:
         señales_alcistas.append("MACD cruzando al alza")
         score_alcista += 1
-    if precio < sma_50 and sma_50 < sma_200:
+    if precio < sma_50_val and sma_50_val < sma_200_val:
         señales_alcistas.append("Precio bajo con posible recuperación")
         score_alcista += 1
-    if precio > cierre_anterior:
+    if precio > cierre_ant:
         señales_alcistas.append("Última vela cerró en verde")
         score_alcista += 1
 
@@ -162,7 +157,7 @@ def analizar_ticker(ticker):
     return {
         "ticker": ticker,
         "precio": round(precio, 2),
-        "rsi": round(rsi, 2),
+        "rsi": round(rsi_val, 2),
         "score_bajista": score_bajista,
         "score_alcista": score_alcista,
         "señales_bajistas": señales_bajistas,
@@ -170,7 +165,7 @@ def analizar_ticker(ticker):
         "tendencia": tendencia,
         "retorno_7d": round(retorno_7d, 2),
         "volatilidad": round(volatilidad, 2),
-        "atr": round(atr, 2) if not np.isnan(atr) else "N/D",
+        "atr": round(atr_val, 2),
         "soporte": soporte,
         "resistencia": resistencia
     }
