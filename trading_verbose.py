@@ -1,4 +1,3 @@
-
 import os
 import yfinance as yf
 import ta
@@ -8,6 +7,7 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
+# Configuración de entorno
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 
@@ -40,8 +40,9 @@ def get_news_sentiment(ticker, num_headlines=3):
         score = sia.polarity_scores(text)['compound']
         sentimiento = "Positivo" if score >= 0.05 else "Negativo" if score <= -0.05 else "Neutro"
         return "; ".join(headlines), sentimiento
-    except:
-        return "No se pudieron obtener noticias.", "No disponible"
+    except Exception as e:
+        print(f"⚠️ Error obteniendo noticias para {ticker}: {e}")
+        return "Error obteniendo noticias.", "No disponible"
 
 def analizar_ticker(ticker):
     try:
@@ -112,7 +113,7 @@ def enviar_telegram(mensaje):
     except Exception as e:
         print("⚠️ Error enviando mensaje:", e)
 
-# Principal
+# Ejecución principal
 resultados = []
 for sym in SYMBOLS:
     print(f"⏳ Procesando {sym}...")
@@ -128,8 +129,7 @@ else:
     señales = mejor["alcistas"] if tipo == "largo" else mejor["bajistas"]
     resumen_noticias, sentimiento = get_news_sentiment(mejor["ticker"]) if es_ventana_de_noticias() else ("Noticias disponibles a las 13:30 UTC.", "No disponible")
 
-    mensaje = f"""
-📈 *Oportunidad destacada: {mejor['ticker']}*
+    mensaje = f"""📈 *Oportunidad destacada: {mejor['ticker']}*
 Precio actual: {mejor['precio']} USD
 RSI: {mejor['rsi']}
 Tendencia: {mejor['tendencia']}
@@ -139,11 +139,10 @@ Soporte: {mejor['soporte']} | Resistencia: {mejor['resistencia']}
 Entrada sugerida: en *{tipo}*
 
 *Señales detectadas:*
-""" + "
-".join(f"- {s}" for s in señales) + f"""
+{chr(10).join(f"- {s}" for s in señales)}
 
 *Noticias recientes:*
 {resumen_noticias}
-_Sentimiento: {sentimiento}_
-"""
+_Sentimiento: {sentimiento}_"""
+
     enviar_telegram(mensaje)
