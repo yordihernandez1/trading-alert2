@@ -333,7 +333,5 @@ else:
                 resumen += f"{c['ticker']}: 📈 {c['intradia']['prob_sube']}% subida | 📉 {c['intradia']['prob_baja']}% bajada\n"
             enviar_telegram(resumen)
             registrar_resumen()
-        else:
-            print("🕒 Aún dentro del margen de espera para resumen.")
 else:
     print("❌ Ningún activo válido para análisis.")
