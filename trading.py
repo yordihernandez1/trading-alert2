@@ -4,6 +4,11 @@ import ta
 import requests
 from datetime import datetime
 import numpy as np
+from bs4 import BeautifulSoup
+from transformers import pipeline  # 🆕
+
+# 🎯 Modelo local de sentimiento
+sentiment_model = pipeline("sentiment-analysis")
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = int(os.environ.get("CHAT_ID"))
@@ -94,7 +99,7 @@ def analizar_ticker(ticker):
     if macd_val > macd_sig:
         señales_alcistas.append("MACD cruzando al alza")
         score_alcista += 1
-    if float(precio) < float(sma_50) and float(sma_50) < float(sma_200):
+    if precio < sma_50 and sma_50 < sma_200:
         señales_alcistas.append("Precio bajo con posible recuperación (por debajo de SMAs)")
         score_alcista += 1
     if precio > cierre_anterior:
@@ -119,6 +124,32 @@ def analizar_ticker(ticker):
         "atr": round(atr, 2) if not np.isnan(atr) else "N/D"
     }
 
+# 📰 Scraping de titulares
+def get_news_headlines(ticker, num_headlines=3):
+    query = f"{ticker} stock"
+    url = f"https://www.google.com/search?q={query}&tbm=nws"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        headlines = [g.select_one('div.JheGif.nDgy9d').text for g in soup.select('div.dbsr')[:num_headlines] if g.select_one('div.JheGif.nDgy9d')]
+        return headlines
+    except:
+        return []
+
+# 🤖 Análisis de sentimiento local
+def analizar_sentimiento(titulares):
+    if not titulares:
+        return "Sin noticias recientes."
+    
+    resultados = sentiment_model(titulares)
+    positivos = sum(1 for r in resultados if r["label"] == "POSITIVE")
+    negativos = sum(1 for r in resultados if r["label"] == "NEGATIVE")
+    sentimiento = "Positivo" if positivos > negativos else "Negativo" if negativos > positivos else "Neutro"
+    resumen = "; ".join(titulares[:2])
+    return f"{resumen}\nSentimiento general: {sentimiento}"
+
+# 🔍 Análisis técnico
 resultados = [analizar_ticker(sym) for sym in symbols]
 resultados = [r for r in resultados if r]
 
@@ -128,6 +159,10 @@ else:
     mejor = max(resultados, key=lambda r: max(r["score_bajista"], r["score_alcista"]))
     tipo = "corto 🔻" if mejor["score_bajista"] >= mejor["score_alcista"] else "largo 🚀"
     señales = mejor["señales_bajistas"] if tipo.startswith("corto") else mejor["señales_alcistas"]
+
+    # 📰 Añadir análisis de noticias
+    titulares = get_news_headlines(mejor["ticker"])
+    resumen_noticia = analizar_sentimiento(titulares)
 
     mensaje = f"""
 📊 OPORTUNIDAD DESTACADA: {mejor['ticker']}
@@ -145,8 +180,13 @@ else:
 - ATR: {mejor['atr']}
 
 📌 Señales detectadas:
-""" + "\n".join(f"- {s}" for s in señales)
+""" + "\n".join(f"- {s}" for s in señales) + f"""
 
+📰 Noticias recientes:
+{resumen_noticia}
+"""
+
+# 📤 Envío a Telegram
 url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
 payload = {
     "chat_id": CHAT_ID,
