@@ -259,7 +259,18 @@ if es_mercado_abierto():
         if mejor["prob_total"] >= UMBRAL_ALERTA:
             titulares = get_news_headlines(mejor["ticker"])
             resumen_noticia = analizar_sentimiento_vader(titulares)
+entrada = mejor["diario"]["precio"]
 
+if mejor["intradia"]["direccion"] == "subida":
+    stop = mejor["diario"]["soporte"]
+    take_profit = entrada + (entrada - stop) * 2
+else:
+    stop = mejor["diario"]["resistencia"]
+    take_profit = entrada - (stop - entrada) * 2
+
+entrada = round(entrada, 2)
+stop = round(stop, 2)
+take_profit = round(take_profit, 2)
             mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
 {'🟢 Largo' if mejor['intradia']['direccion'] == 'subida' else '🔴 Corto'}
 
@@ -274,7 +285,9 @@ if es_mercado_abierto():
 🎯 *Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}
 ⏳ *Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min
 🔻 *Soporte:* {mejor['diario']['soporte']} | 🔺 *Resistencia:* {mejor['diario']['resistencia']}
-
+💵 *Entrada sugerida:* {entrada}  
+🛑 *Stop Loss:* {stop}  
+🎯 *Take Profit:* {take_profit}
 📰 *Noticias recientes:*
 {resumen_noticia}
 """
