@@ -45,7 +45,6 @@ def analizar_sentimiento_vader(titulares):
     resumen = "; ".join(titulares[:2])
     return f"{resumen}\nSentimiento general: {sentimiento}"
 
-
 def analizar_tecnico_diario(ticker):
     try:
         df = yf.download(ticker, period="3mo", interval="1d", auto_adjust=True, progress=False)
@@ -90,7 +89,7 @@ def analizar_tecnico_diario(ticker):
 def analizar_intradía(ticker):
     try:
         df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
-        if df.empty or len(df) < 30 or df["Volume"].iloc[-1] == 0:
+        if df.empty or len(df) < 30 or float(df["Volume"].iloc[-1]) == 0:
             return None, None
 
         close = df["Close"]
@@ -117,7 +116,6 @@ def analizar_intradía(ticker):
 
         volumen_fuerte = volume.iloc[-1] > volume.rolling(20).mean().iloc[-1] * 1.5
 
-        # riesgo recompensa
         riesgo = close.iloc[-1] - min(low.iloc[-6:-1])
         recompensa = max(high.iloc[-1:].repeat(6).values[0] - close.iloc[-1], 0)
         rr = round(recompensa / riesgo, 2) if riesgo > 0 else "N/A"
@@ -230,4 +228,3 @@ if es_mercado_abierto():
         print("❌ Ningún activo válido para análisis.")
 else:
     print("⏳ Mercado cerrado.")
-
