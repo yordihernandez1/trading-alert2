@@ -3,6 +3,7 @@ import yfinance as yf
 import ta
 import requests
 import numpy as np
+import matplotlib.pyplot as plt
 from datetime import datetime
 from bs4 import BeautifulSoup
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
@@ -13,10 +14,11 @@ CHAT_ID = os.environ.get("CHAT_ID")
 SYMBOLS = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
+UMBRAL_ALERTA = 50
 
-def es_ventana_de_noticias():
+def es_mercado_abierto():
     ahora = datetime.utcnow()
-    return ahora.hour == 13 and 30 <= ahora.minute <= 35
+    return ahora.weekday() < 5 or "BTC-USD" in SYMBOLS
 
 def get_news_headlines(ticker, num_headlines=3):
     url = f"https://www.google.com/search?q={ticker}+stock&tbm=nws"
@@ -41,19 +43,10 @@ def analizar_sentimiento_vader(titulares):
     score = sia.polarity_scores(text)["compound"]
     sentimiento = "Positivo" if score >= 0.05 else "Negativo" if score <= -0.05 else "Neutro"
     resumen = "; ".join(titulares[:2])
-    return f"{resumen}\nSentimiento general: {sentimiento}"
+    return f"{resumen}
+Sentimiento general: {sentimiento}"
 
-def detectar_tendencia(close):
-    if len(close) < 10:
-        return "Insuficiente"
-    return "Alcista" if close.iloc[-1] > close.iloc[-10] else "Bajista"
-
-def encontrar_soporte_resistencia(close, periodo=14):
-    soporte = min(close[-periodo:])
-    resistencia = max(close[-periodo:])
-    return round(soporte, 2), round(resistencia, 2)
-
-def analizar_ticker(ticker):
+def analizar_tecnico_diario(ticker):
     try:
         df = yf.download(ticker, period="3mo", interval="1d", auto_adjust=True, progress=False)
         if df.empty or len(df) < 50:
@@ -62,66 +55,49 @@ def analizar_ticker(ticker):
         high = df["High"].squeeze()
         low = df["Low"].squeeze()
 
-        rsi = ta.momentum.RSIIndicator(close.squeeze()).rsi()
-        macd = ta.trend.MACD(close.squeeze())
-        sma_50 = ta.trend.SMAIndicator(close.squeeze(), window=50).sma_indicator()
-        sma_200 = ta.trend.SMAIndicator(close.squeeze(), window=200).sma_indicator()
-        atr = ta.volatility.AverageTrueRange(high.squeeze(), low.squeeze(), close.squeeze()).average_true_range()
+        rsi = ta.momentum.RSIIndicator(close).rsi()
+        macd = ta.trend.MACD(close)
+        sma_50 = ta.trend.SMAIndicator(close, window=50).sma_indicator()
+        sma_200 = ta.trend.SMAIndicator(close, window=200).sma_indicator()
+        atr = ta.volatility.AverageTrueRange(high, low, close).average_true_range()
+        tendencia = "Alcista" if close.iloc[-1] > close.iloc[-10] else "Bajista"
+
+        señales = []
+        if rsi.iloc[-1] > RSI_SOBRECOMPRA:
+            señales.append("RSI en sobrecompra")
+        if rsi.iloc[-1] < RSI_SOBREVENTA:
+            señales.append("RSI en sobreventa")
+        if macd.macd().iloc[-1] > macd.macd_signal().iloc[-1]:
+            señales.append("MACD cruzando al alza")
+        else:
+            señales.append("MACD cruzando a la baja")
+        if close.iloc[-1] > sma_50.iloc[-1]:
+            señales.append("Precio sobre SMA50")
+        if sma_50.iloc[-1] > sma_200.iloc[-1]:
+            señales.append("SMA50 sobre SMA200")
+
+        return {
+            "precio": round(close.iloc[-1], 2),
+            "rsi": round(rsi.iloc[-1], 2),
+            "tendencia": tendencia,
+            "volatilidad": round(np.std(close[-14:]) / close.iloc[-1] * 100, 2),
+            "atr": round(atr.iloc[-1], 2),
+            "señales": señales
+        }
     except:
         return None
-
-    try:
-        precio = close.iloc[-1]
-        cierre_ant = close.iloc[-2]
-        rsi_val = rsi.iloc[-1]
-        macd_val = macd.macd().iloc[-1]
-        macd_sig = macd.macd_signal().iloc[-1]
-        sma50 = sma_50.iloc[-1]
-        sma200 = sma_200.iloc[-1]
-        atr_val = atr.iloc[-1]
-    except:
-        return None
-
-    señales_alcistas, señales_bajistas = [], []
-    if rsi_val < RSI_SOBREVENTA: señales_alcistas.append("RSI en sobreventa")
-    if rsi_val > RSI_SOBRECOMPRA: señales_bajistas.append("RSI en sobrecompra")
-    if macd_val > macd_sig: señales_alcistas.append("MACD cruzando al alza")
-    if macd_val < macd_sig: señales_bajistas.append("MACD cruzando a la baja")
-    if precio > cierre_ant: señales_alcistas.append("Última vela verde")
-    if precio < cierre_ant: señales_bajistas.append("Última vela roja")
-    if precio > sma50: señales_alcistas.append("Precio sobre SMA50")
-    else: señales_bajistas.append("Precio bajo SMA50")
-    if sma50 > sma200: señales_alcistas.append("SMA50 sobre SMA200")
-    else: señales_bajistas.append("SMA50 bajo SMA200")
-
-    tendencia = detectar_tendencia(close)
-    retorno_7d = ((close.iloc[-1] / close.iloc[-7]) - 1) * 100
-    volatilidad = np.std(close[-14:]) / close.iloc[-1] * 100
-    soporte, resistencia = encontrar_soporte_resistencia(close)
-
-    return {
-        "ticker": ticker,
-        "precio": round(precio, 2),
-        "rsi": round(rsi_val, 2),
-        "score_bajista": len(señales_bajistas),
-        "score_alcista": len(señales_alcistas),
-        "señales_bajistas": señales_bajistas,
-        "señales_alcistas": señales_alcistas,
-        "tendencia": tendencia,
-        "retorno_7d": round(retorno_7d, 2),
-        "volatilidad": round(volatilidad, 2),
-        "atr": round(atr_val, 2),
-        "soporte": soporte,
-        "resistencia": resistencia
-    }
 
 def analizar_intradía(ticker):
     try:
         df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
-        if df.empty or len(df) < 30:
-            return None
+        if df.empty or len(df) < 30 or df["Volume"].iloc[-1] == 0:
+            return None, None
 
-        close = df["Close"].squeeze()
+        close = df["Close"]
+        low = df["Low"]
+        high = df["High"]
+        volume = df["Volume"]
+
         ema9 = ta.trend.EMAIndicator(close, window=9).ema_indicator()
         ema21 = ta.trend.EMAIndicator(close, window=21).ema_indicator()
         rsi = ta.momentum.RSIIndicator(close).rsi()
@@ -134,19 +110,50 @@ def analizar_intradía(ticker):
 
         rsi_val = rsi.iloc[-1]
         zona_rsi = "Normal"
-        if rsi_val >= 70:
+        if rsi_val >= RSI_SOBRECOMPRA:
             zona_rsi = "Sobrecompra"
-        elif rsi_val <= 30:
+        elif rsi_val <= RSI_SOBREVENTA:
             zona_rsi = "Sobreventa"
 
+        volumen_fuerte = volume.iloc[-1] > volume.rolling(20).mean().iloc[-1] * 1.5
+
+        # riesgo recompensa
+        riesgo = close.iloc[-1] - min(low.iloc[-6:-1])
+        recompensa = max(high.iloc[-1:].repeat(6).values[0] - close.iloc[-1], 0)
+        rr = round(recompensa / riesgo, 2) if riesgo > 0 else "N/A"
+
+        señales = []
+        prob_sube = prob_baja = 0
+
+        if cruce_ema == "Cruce alcista EMA9/21":
+            señales.append("📈 Cruce alcista EMA9/21")
+            prob_sube += 30
+        elif cruce_ema == "Cruce bajista EMA9/21":
+            señales.append("📉 Cruce bajista EMA9/21")
+            prob_baja += 30
+
+        if zona_rsi == "Sobreventa":
+            señales.append("🔽 RSI en sobreventa")
+            prob_sube += 20
+        elif zona_rsi == "Sobrecompra":
+            señales.append("🔼 RSI en sobrecompra")
+            prob_baja += 20
+
+        if volumen_fuerte:
+            señales.append("🔥 Volumen inusualmente alto")
+            prob_sube += 10
+            prob_baja += 10
+
         return {
-            "cruce_ema": cruce_ema,
-            "zona_rsi": zona_rsi,
-            "rsi": round(rsi_val, 2)
-        }
+            "señales": señales,
+            "prob_sube": prob_sube,
+            "prob_baja": prob_baja,
+            "rr": rr,
+            "direccion": "subida" if prob_sube >= prob_baja else "bajada"
+        }, df
     except Exception as e:
-        print(f"❌ Error intradía en {ticker}: {e}")
-        return None
+        print(f"❌ Error intradía {ticker}: {e}")
+        return None, None
 
 def enviar_telegram(mensaje):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
@@ -156,72 +163,71 @@ def enviar_telegram(mensaje):
     except Exception as e:
         print("⚠️ Error enviando mensaje:", e)
 
+def enviar_imagen(path):
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
+    with open(path, "rb") as photo:
+        requests.post(url, files={"photo": photo}, data={"chat_id": CHAT_ID})
+
+def generar_grafico(df, ticker):
+    plt.figure(figsize=(10, 4))
+    plt.plot(df["Close"], label="Precio", linewidth=1.2)
+    plt.plot(ta.trend.EMAIndicator(df["Close"], window=9).ema_indicator(), label="EMA9")
+    plt.plot(ta.trend.EMAIndicator(df["Close"], window=21).ema_indicator(), label="EMA21")
+    plt.title(f"{ticker} - Intradía 5m")
+    plt.legend()
+    plt.grid()
+    filename = f"{ticker}_chart.png"
+    plt.savefig(filename, bbox_inches="tight")
+    plt.close()
+    return filename
+
 # Ejecución principal
-resultados = []
-for sym in SYMBOLS:
-    print(f"🔍 Analizando {sym}...")
-    res = analizar_ticker(sym)
-    if res:
-        resultados.append(res)
+if es_mercado_abierto():
+    candidatos = []
 
-if not resultados:
-    enviar_telegram("No se pudo analizar ningún activo.")
-else:
-    mejor = max(resultados, key=lambda r: max(r["score_bajista"], r["score_alcista"]))
-    tipo = "corto" if mejor["score_bajista"] >= mejor["score_alcista"] else "largo"
-    señales = mejor["señales_bajistas"] if tipo == "corto" else mejor["señales_alcistas"]
+    for ticker in SYMBOLS:
+        print(f"🔍 Evaluando {ticker}...")
+        diario = analizar_tecnico_diario(ticker)
+        intradia, df = analizar_intradía(ticker)
+        if diario and intradia:
+            prob_total = max(intradia["prob_sube"], intradia["prob_baja"])
+            candidatos.append({
+                "ticker": ticker,
+                "diario": diario,
+                "intradia": intradia,
+                "df": df,
+                "prob_total": prob_total
+            })
 
-    if es_ventana_de_noticias():
-        titulares = get_news_headlines(mejor["ticker"])
-        resumen_noticia = analizar_sentimiento_vader(titulares)
-    else:
-        resumen_noticia = "Análisis de noticias disponible a las 13:30 UTC."
+    if candidatos:
+        mejor = max(candidatos, key=lambda r: r["prob_total"])
+        if mejor["prob_total"] >= UMBRAL_ALERTA:
+            titulares = get_news_headlines(mejor["ticker"])
+            resumen_noticia = analizar_sentimiento_vader(titulares)
 
-    sentimiento = (
-        resumen_noticia.splitlines()[-1]
-        if isinstance(resumen_noticia, str) and 'Sentimiento general:' in resumen_noticia
-        else 'No disponible'
-    )
+            mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
+{'🟢 Largo' if mejor['intradia']['direccion'] == 'subida' else '🔴 Corto'}
 
-    # Análisis intradía
-    intradia = analizar_intradía(mejor["ticker"])
-    señales_extra = []
-    prob_sube = 0
-    prob_baja = 0
-    if intradia:
-        if intradia["cruce_ema"] == "Cruce alcista EMA9/21":
-            señales_extra.append(intradia["cruce_ema"])
-            prob_sube += 25
-        elif intradia["cruce_ema"] == "Cruce bajista EMA9/21":
-            señales_extra.append(intradia["cruce_ema"])
-            prob_baja += 25
-        if intradia["zona_rsi"] == "Sobreventa":
-            señales_extra.append("RSI 5min en sobreventa")
-            prob_sube += 25
-        elif intradia["zona_rsi"] == "Sobrecompra":
-            señales_extra.append("RSI 5min en sobrecompra")
-            prob_baja += 25
+*Señales diarias:*
+{chr(10).join(f"- {s}" for s in mejor['diario']['señales'])}
 
-    mensaje = f"""📌 *Oportunidad destacada: {mejor['ticker']}*
-Precio: {mejor['precio']} USD
-RSI Diario: {mejor['rsi']}
-Tendencia: {mejor['tendencia']}
-Volatilidad: {mejor['volatilidad']}% | ATR: {mejor['atr']}
-Retorno 7d: {mejor['retorno_7d']}%
-Soporte: {mejor['soporte']} | Resistencia: {mejor['resistencia']}
-Entrada sugerida: en *{tipo}*
+*Señales intradía:*
+{chr(10).join(f"- {s}" for s in mejor['intradia']['señales'])}
 
-*Señales técnicas:*
-{chr(10).join(f"- {s}" for s in señales)}
-
-*Señales intradía (5m):*
-{chr(10).join(f"- {s}" for s in señales_extra)}
-
-📈 *Probabilidad de subida:* {prob_sube}%
-📉 *Probabilidad de bajada:* {prob_baja}%
+📈 *Prob. subida:* {mejor['intradia']['prob_sube']}%
+📉 *Prob. bajada:* {mejor['intradia']['prob_baja']}%
+🎯 *Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}
 
 📰 *Noticias recientes:*
 {resumen_noticia}
 """
+            enviar_telegram(mensaje)
+            img_path = generar_grafico(mejor["df"], mejor["ticker"])
+            enviar_imagen(img_path)
+        else:
+            print("⚠️ No se detectó ninguna oportunidad relevante.")
+    else:
+        print("❌ Ningún activo válido para análisis.")
+else:
+    print("⏳ Mercado cerrado.")
 
-    enviar_telegram(mensaje)
