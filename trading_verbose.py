@@ -7,6 +7,12 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from bs4 import BeautifulSoup
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
+import json
+from pathlib import Path
+
+LOG_ALERTA = "ultima_alerta.json"
+TIEMPO_RESUMEN_MINUTOS = 30
+
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
@@ -43,16 +49,17 @@ def analizar_sentimiento_vader(titulares):
     score = sia.polarity_scores(text)["compound"]
     sentimiento = "Positivo" if score >= 0.05 else "Negativo" if score <= -0.05 else "Neutro"
     resumen = "; ".join(titulares[:2])
-    return f"{resumen}\nSentimiento general: {sentimiento}"
+    return f"{resumen}
+Sentimiento general: {sentimiento}"
 
 def analizar_tecnico_diario(ticker):
     try:
         df = yf.download(ticker, period="3mo", interval="1d", auto_adjust=True, progress=False)
         if df.empty or len(df) < 50:
             return None
-        close = df["Close"].squeeze()
-        high = df["High"].squeeze()
-        low = df["Low"].squeeze()
+        close = df["Close"].squeeze().squeeze()
+        high = df["High"].squeeze().squeeze()
+        low = df["Low"].squeeze().squeeze()
 
         rsi = ta.momentum.RSIIndicator(close).rsi()
         macd = ta.trend.MACD(close)
@@ -89,7 +96,7 @@ def analizar_tecnico_diario(ticker):
 def analizar_intradía(ticker):
     try:
         df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
-        if df.empty or len(df) < 30 or df["Volume"].squeeze().iloc[-1].item() == 0:
+        if df.empty or len(df) < 30 or float(df["Volume"].squeeze().iloc[-1]) == 0:
             return None, None
 
         close = df["Close"].squeeze()
@@ -116,6 +123,7 @@ def analizar_intradía(ticker):
 
         volumen_fuerte = volume.iloc[-1] > volume.rolling(20).mean().iloc[-1] * 1.5
 
+        # riesgo recompensa
         riesgo = close.iloc[-1] - min(low.iloc[-6:-1])
         recompensa = max(high.iloc[-1:].repeat(6).values[0] - close.iloc[-1], 0)
         rr = round(recompensa / riesgo, 2) if riesgo > 0 else "N/A"
@@ -153,7 +161,8 @@ def analizar_intradía(ticker):
         print(f"❌ Error intradía {ticker}: {e}")
         return None, None
 
-def enviar_telegram(mensaje):
+def enviar_telegram(mensaje)
+            registrar_alerta():
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
     try:
@@ -168,9 +177,9 @@ def enviar_imagen(path):
 
 def generar_grafico(df, ticker):
     plt.figure(figsize=(10, 4))
-    plt.plot(df["Close"], label="Precio", linewidth=1.2)
-    plt.plot(ta.trend.EMAIndicator(df["Close"], window=9).ema_indicator(), label="EMA9")
-    plt.plot(ta.trend.EMAIndicator(df["Close"], window=21).ema_indicator(), label="EMA21")
+    plt.plot(df["Close"].squeeze(), label="Precio", linewidth=1.2)
+    plt.plot(ta.trend.EMAIndicator(df["Close"].squeeze(), window=9).ema_indicator(), label="EMA9")
+    plt.plot(ta.trend.EMAIndicator(df["Close"].squeeze(), window=21).ema_indicator(), label="EMA21")
     plt.title(f"{ticker} - Intradía 5m")
     plt.legend()
     plt.grid()
@@ -178,6 +187,22 @@ def generar_grafico(df, ticker):
     plt.savefig(filename, bbox_inches="tight")
     plt.close()
     return filename
+
+
+def registrar_alerta():
+    with open(LOG_ALERTA, "w") as f:
+        json.dump({"ultima": datetime.utcnow().isoformat()}, f)
+
+def tiempo_desde_ultima_alerta():
+    if not Path(LOG_ALERTA).exists():
+        return 9999
+    try:
+        with open(LOG_ALERTA, "r") as f:
+            data = json.load(f)
+        ultima = datetime.fromisoformat(data["ultima"])
+        return (datetime.utcnow() - ultima).total_seconds() / 60
+    except:
+        return 9999
 
 # Ejecución principal
 if es_mercado_abierto():
@@ -220,6 +245,7 @@ if es_mercado_abierto():
 {resumen_noticia}
 """
             enviar_telegram(mensaje)
+            registrar_alerta()
             img_path = generar_grafico(mejor["df"], mejor["ticker"])
             enviar_imagen(img_path)
         else:
