@@ -283,5 +283,4 @@ Con base en los siguientes datos técnicos para {mejor['ticker']}:
 ¿Consideras que es una buena oportunidad para entrar en {'compra' if tipo == 'largo' else 'venta'}? Justifica brevemente.
 '''
 
-        print("🚀 Enviando mensaje a Telegram...")
 enviar_mensaje_telegram(BOT_TOKEN, CHAT_ID, mensaje)
