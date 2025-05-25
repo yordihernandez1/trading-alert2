@@ -12,7 +12,6 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 # Descargar diccionario de VADER (solo la primera vez)
 nltk.download('vader_lexicon')
 
-# ✅ Configuración
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = int(os.environ.get("CHAT_ID"))
 
@@ -20,12 +19,10 @@ symbols = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
 
-# 🕐 Ventana para análisis de noticias
 def es_ventana_de_noticias():
     ahora = datetime.utcnow()
     return ahora.hour == 13 and 30 <= ahora.minute <= 35
 
-# 📰 Scraping de titulares
 def get_news_headlines(ticker, num_headlines=3):
     query = f"{ticker} stock"
     url = f"https://www.google.com/search?q={query}&tbm=nws"
@@ -38,7 +35,6 @@ def get_news_headlines(ticker, num_headlines=3):
     except:
         return []
 
-# 🧠 Análisis de sentimiento con VADER
 def analizar_sentimiento_vader(titulares):
     if not titulares:
         return "Sin noticias recientes."
@@ -58,7 +54,6 @@ def analizar_sentimiento_vader(titulares):
     resumen = "; ".join(titulares[:2])
     return f"{resumen}\nSentimiento general: {sentimiento}"
 
-# 📈 Análisis técnico
 def detectar_tendencia(close):
     try:
         val_actual = float(close.iloc[-1])
@@ -84,12 +79,12 @@ def analizar_ticker(ticker):
         return None
 
     close = data["Close"].squeeze()
-    data["rsi"] = ta.momentum.RSIIndicator(close=close).rsi()
-    macd = ta.trend.MACD(close=close)
+    data["rsi"] = ta.momentum.RSIIndicator(close).rsi()
+    macd = ta.trend.MACD(close)
     data["macd"] = macd.macd()
     data["macd_signal"] = macd.macd_signal()
-    data["sma_50"] = ta.trend.SMAIndicator(close=close, window=50).sma_indicator()
-    data["sma_200"] = ta.trend.SMAIndicator(close=close, window=200).sma_indicator()
+    data["sma_50"] = ta.trend.SMAIndicator(close, window=50).sma_indicator()
+    data["sma_200"] = ta.trend.SMAIndicator(close, window=200).sma_indicator()
 
     try:
         atr = ta.volatility.AverageTrueRange(
@@ -161,7 +156,6 @@ def analizar_ticker(ticker):
         "atr": round(atr, 2) if not np.isnan(atr) else "N/D"
     }
 
-# 📊 Backtesting
 def detectar_entrada_alcista(df):
     entradas = []
     for i in range(5, len(df)):
@@ -193,12 +187,13 @@ def analizar_backtest(ticker, dias_salida=5):
         return None
 
     df = data.copy()
-    df["rsi"] = ta.momentum.RSIIndicator(df["Close"]).rsi()
-    macd = ta.trend.MACD(df["Close"])
+    close = df["Close"].squeeze()
+    df["rsi"] = ta.momentum.RSIIndicator(close).rsi()
+    macd = ta.trend.MACD(close)
     df["macd"] = macd.macd()
     df["macd_signal"] = macd.macd_signal()
-    df["sma_50"] = ta.trend.SMAIndicator(df["Close"], 50).sma_indicator()
-    df["sma_200"] = ta.trend.SMAIndicator(df["Close"], 200).sma_indicator()
+    df["sma_50"] = ta.trend.SMAIndicator(close, 50).sma_indicator()
+    df["sma_200"] = ta.trend.SMAIndicator(close, 200).sma_indicator()
 
     entradas = detectar_entrada_alcista(df)
     resultados = []
@@ -225,7 +220,6 @@ def analizar_backtest(ticker, dias_salida=5):
         "porcentaje_ganadores": round((resultados > 0).mean() * 100, 2)
     }
 
-# 🚀 Ejecución principal
 resultados = [analizar_ticker(sym) for sym in symbols]
 resultados = [r for r in resultados if r]
 
