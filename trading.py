@@ -8,14 +8,23 @@ from datetime import datetime
 from bs4 import BeautifulSoup
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 
-# ⚙️ Usar lexicón local desde la raíz del proyecto
-def cargar_analizador_personalizado():
-    lexicon_path = './vader_lexicon.txt'
-    return SentimentIntensityAnalyzer(lexicon_file=lexicon_path)
+# 🔧 Cargar VADER desde archivo local
+class CustomSentimentIntensityAnalyzer(SentimentIntensityAnalyzer):
+    def __init__(self):
+        lexicon_path = os.path.join(os.path.dirname(__file__), "vader_lexicon.txt")
+        super().__init__(lexicon_file=lexicon_path)
 
+def cargar_analizador_personalizado():
+    return CustomSentimentIntensityAnalyzer()
+
+# 🛠️ Configuración desde variables de entorno
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = int(os.environ.get("CHAT_ID"))
 
+if not BOT_TOKEN or not CHAT_ID:
+    raise ValueError("BOT_TOKEN y/o CHAT_ID no definidos como variables de entorno")
+
+# 📈 Símbolos a analizar
 symbols = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
@@ -31,9 +40,13 @@ def get_news_headlines(ticker, num_headlines=3):
     try:
         response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, 'html.parser')
-        headlines = [g.select_one('div.JheGif.nDgy9d').text for g in soup.select('div.dbsr')[:num_headlines] if g.select_one('div.JheGif.nDgy9d')]
+        headlines = [
+            g.select_one('div.JheGif.nDgy9d').text
+            for g in soup.select('div.dbsr')[:num_headlines]
+            if g.select_one('div.JheGif.nDgy9d')
+        ]
         return headlines
-    except:
+    except Exception:
         return []
 
 def analizar_sentimiento_vader(titulares):
@@ -62,7 +75,7 @@ def detectar_tendencia(close):
             return "Bajista"
         else:
             return "Lateral"
-    except:
+    except Exception:
         return "Desconocida"
 
 def encontrar_soporte_resistencia(close, periodo=14):
@@ -72,16 +85,16 @@ def encontrar_soporte_resistencia(close, periodo=14):
 
 def analizar_ticker(ticker):
     try:
-        data = yf.download(ticker, period="3mo", interval="1d")
+        data = yf.download(ticker, period="3mo", interval="1d", progress=False)
         if data.empty or len(data) < 20:
             return None
-    except:
+    except Exception:
         return None
 
     if any(col not in data.columns for col in ["High", "Low", "Close"]):
         return None
 
-    close = data["Close"].squeeze()
+    close = data["Close"]
     data["rsi"] = ta.momentum.RSIIndicator(close).rsi()
     macd = ta.trend.MACD(close)
     data["macd"] = macd.macd()
@@ -90,7 +103,9 @@ def analizar_ticker(ticker):
     data["sma_200"] = ta.trend.SMAIndicator(close, window=200).sma_indicator()
 
     try:
-        atr = ta.volatility.AverageTrueRange(high=data["High"], low=data["Low"], close=close).average_true_range().iloc[-1]
+        atr = ta.volatility.AverageTrueRange(
+            high=data["High"], low=data["Low"], close=close
+        ).average_true_range().iloc[-1]
     except:
         atr = np.nan
 
@@ -227,4 +242,3 @@ Con base en los siguientes datos técnicos para {mejor['ticker']}:
         print("✅ Alerta enviada correctamente")
     else:
         print("❌ Error al enviar alerta:", response.text)
-
