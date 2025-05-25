@@ -286,20 +286,20 @@ if es_mercado_abierto():
 📰 *Noticias recientes:*
 {resumen_noticia}
 """
-            enviar_telegram(mensaje)
-            registrar_alerta()
-            img_path = generar_grafico(mejor["df"], mejor["ticker"])
-            enviar_imagen(img_path)
+        enviar_telegram(mensaje)
+        registrar_alerta()
+        img_path = generar_grafico(mejor["df"], mejor["ticker"])
+        enviar_imagen(img_path)
     else:
-            minutos = tiempo_desde_ultima_alerta()
-            if minutos >= TIEMPO_RESUMEN_MINUTOS:
-                resumen = "⏱ *Sin alertas en los últimos 30 minutos.*\\n\\n*Probabilidades actuales:*\\n\\n"
-                for c in candidatos:
-                    resumen += f"{c['ticker']}: 📈 {c['intradia']['prob_sube']}% subida | 📉 {c['intradia']['prob_baja']}% bajada\\n'
-                enviar_telegram(resumen)
-            else:
-                print("🕒 Aún dentro del margen de espera para resumen.")
-    else:
-        print("❌ Ningún activo válido para análisis.")
+        minutos = tiempo_desde_ultima_alerta()
+        minutos_resumen = tiempo_desde_ultimo_resumen()
+        if minutos >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= TIEMPO_RESUMEN_MINUTOS:
+            resumen = "⏱ *Sin alertas en los últimos 30 minutos.*\n\n*Probabilidades actuales:*\n\n"
+            for c in candidatos:
+                resumen += f"{c['ticker']}: 📈 {c['intradia']['prob_sube']}% subida | 📉 {c['intradia']['prob_baja']}% bajada\n"
+            enviar_telegram(resumen)
+            registrar_resumen()
+        else:
+            print("🕒 Aún dentro del margen de espera para resumen.")
 else:
-    print("⏳ Mercado cerrado.")
+    print("❌ Ningún activo válido para análisis.")
