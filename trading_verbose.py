@@ -16,7 +16,7 @@ CHAT_ID = os.environ.get("CHAT_ID")
 SYMBOLS = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
-UMBRAL_ALERTA = 50
+UMBRAL_ALERTA = 0
 LOG_ALERTA = "ultima_alerta.json"
 TIEMPO_RESUMEN_MINUTOS = 30
 
@@ -281,22 +281,28 @@ if es_mercado_abierto():
     if candidatos:
         mejor = max(candidatos, key=lambda r: r["prob_total"])
         if mejor["prob_total"] >= UMBRAL_ALERTA:
-            titulares = get_news_headlines(mejor["ticker"])
-            resumen_noticia = analizar_sentimiento_vader(titulares)
+    entrada = mejor["diario"]["precio"]
 
-        entrada = mejor["diario"]["precio"]
+    if mejor["intradia"]["direccion"] == "subida":
+        stop = mejor["diario"]["soporte"]
+        take_profit = entrada + (entrada - stop) * 2
+    else:
+        stop = mejor["diario"]["resistencia"]
+        take_profit = entrada - (stop - entrada) * 2
 
-        if mejor["intradia"]["direccion"] == "subida":
-            stop = mejor["diario"]["soporte"]
-            take_profit = entrada + (entrada - stop) * 2
-        else:
-            stop = mejor["diario"]["resistencia"]
-            take_profit = entrada - (stop - entrada) * 2
+    entrada = round(entrada, 2)
+    stop = round(stop, 2)
+    take_profit = round(take_profit, 2)
 
-            entrada = round(entrada, 2)
-            stop = round(stop, 2)
-            take_profit = round(take_profit, 2)
-            mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
+    # Asegúrate de que esto está aquí dentro
+    titulares = get_news_headlines(mejor["ticker"])
+    resumen_noticia = analizar_sentimiento_vader(titulares)
+
+    mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
+    ...
+    {resumen_noticia}
+    """
+
 {'🟢 Largo' if mejor['intradia']['direccion'] == 'subida' else '🔴 Corto'}
 
 *Señales diarias:*
@@ -315,7 +321,7 @@ if es_mercado_abierto():
 🎯 *Take Profit:* {take_profit}
 📰 *Noticias recientes:*
 {resumen_noticia}
-"""
+
         enviar_telegram(mensaje)
         registrar_alerta()
         img_path = generar_grafico(mejor["df"], mejor["ticker"])
