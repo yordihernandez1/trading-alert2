@@ -280,15 +280,16 @@ if es_mercado_abierto():
 
     if candidatos:
         mejor = max(candidatos, key=lambda r: r["prob_total"])
+
         if mejor["prob_total"] >= UMBRAL_ALERTA:
             entrada = mejor["diario"]["precio"]
 
-    if mejor["intradia"]["direccion"] == "subida":
-        stop = mejor["diario"]["soporte"]
-        take_profit = entrada + (entrada - stop) * 2
-    else:
-        stop = mejor["diario"]["resistencia"]
-        take_profit = entrada - (stop - entrada) * 2
+            if mejor["intradia"]["direccion"] == "subida":
+            stop = mejor["diario"]["soporte"]
+            take_profit = entrada + (entrada - stop) * 2
+        else:
+            stop = mejor["diario"]["resistencia"]
+            take_profit = entrada - (stop - entrada) * 2
 
     entrada = round(entrada, 2)
     stop = round(stop, 2)
