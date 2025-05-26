@@ -214,7 +214,7 @@ def analizar_tecnico_diario(ticker):
 def analizar_intradía(ticker):
     try:
         df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
-        if df.empty or len(df) < 30 or float(df["Volume"].squeeze().iloc[-1]) == 0:
+        if df.empty or len(df) < 30 or float(df["Volume"].iloc[-1]) == 0:
             return None, None
 
         close = df["Close"]
@@ -222,7 +222,7 @@ def analizar_intradía(ticker):
         high = df["High"]
         volume = df["Volume"]
 
-        señales = []  # ✅ inicializado al principio
+        señales = []
 
         ema9 = ta.trend.EMAIndicator(close, window=9).ema_indicator()
         ema21 = ta.trend.EMAIndicator(close, window=21).ema_indicator()
@@ -247,8 +247,22 @@ def analizar_intradía(ticker):
         volumen_fuerte = volume.iloc[-1] > volume.rolling(20).mean().iloc[-1] * 1.5
 
         precio_actual = close.iloc[-1]
-minimo_reciente = low[-6:-1].min()
-maximo_esperado = high[-6:].max()
+        minimo_reciente = low[-6:-1].min()
+        maximo_esperado = high[-6:].max()
+
+        riesgo = round(precio_actual - minimo_reciente, 2)
+        recompensa = round(maximo_esperado - precio_actual, 2)
+
+        if riesgo <= 0 or recompensa <= 0:
+            rr = "No válido"
+        else:
+            rr = round(recompensa / riesgo, 2)
+
+        # (continúa con señales, dirección, etc...)
+
+    except Exception as e:
+        print(f"❌ Error intradía {ticker}: {e}")
+        return None, None
 
 riesgo = round(precio_actual - minimo_reciente, 2)
 recompensa = round(maximo_esperado - precio_actual, 2)
