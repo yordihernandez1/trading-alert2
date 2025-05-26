@@ -332,6 +332,7 @@ if es_mercado_abierto():
                 "df": df,
                 "prob_total": prob_total
             })
+            print(f"✅ Análisis completo para {ticker}")
 
     if candidatos:
         mejor = max(candidatos, key=lambda r: r["prob_total"])
