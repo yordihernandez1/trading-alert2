@@ -281,7 +281,7 @@ if es_mercado_abierto():
     if candidatos:
         mejor = max(candidatos, key=lambda r: r["prob_total"])
         if mejor["prob_total"] >= UMBRAL_ALERTA:
-            entrada = mejor["diario"]["precio"]
+    entrada = mejor["diario"]["precio"]
 
     if mejor["intradia"]["direccion"] == "subida":
         stop = mejor["diario"]["soporte"]
@@ -306,16 +306,16 @@ if es_mercado_abierto():
 *Señales intradía:*
 {chr(10).join(f"- {s}" for s in mejor['intradia']['señales'])}
 
-*Prob. subida:* {mejor['intradia']['prob_sube']}%
-*Prob. bajada:* {mejor['intradia']['prob_baja']}%
-*Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}
-*Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min
-*Soporte:* {mejor['diario']['soporte']} | *Resistencia:* {mejor['diario']['resistencia']}
-*Entrada sugerida:* {entrada}  
-*Stop Loss:* {stop}  
-*Take Profit:* {take_profit}
+📈 *Prob. subida:* {mejor['intradia']['prob_sube']}%  
+📉 *Prob. bajada:* {mejor['intradia']['prob_baja']}%  
+🎯 *Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}  
+⏳ *Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min  
+📊 *Soporte:* {mejor['diario']['soporte']} | 📈 *Resistencia:* {mejor['diario']['resistencia']}  
+💵 *Entrada sugerida:* {entrada}  
+🛑 *Stop Loss:* {stop}  
+🎯 *Take Profit:* {take_profit}  
 
-*Noticias recientes:*
+📰 *Noticias recientes:*
 {resumen_noticia}
 """
 
