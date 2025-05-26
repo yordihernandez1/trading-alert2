@@ -12,6 +12,10 @@ from pathlib import Path
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
+if not BOT_TOKEN:
+    raise ValueError("❌ BOT_TOKEN no está definido. Asegúrate de configurarlo como variable de entorno.")
+if not CHAT_ID:
+    raise ValueError("❌ CHAT_ID no está definido. Asegúrate de configurarlo como variable de entorno.")
 
 SYMBOLS = [
     # ACCIONES VOLÁTILES (alta actividad en días hábiles)
@@ -61,7 +65,10 @@ def tiempo_desde_ultima_alerta():
     try:
         with open(path, "r") as f:
             data = json.load(f)
-        ultima = datetime.fromisoformat(data.get("ultima", "2000-01-01T00:00:00"))
+        ultima_raw = data.get("ultima")
+        if not ultima_raw:
+            raise ValueError("Campo 'ultima' no encontrado")
+        ultima = datetime.fromisoformat(ultima_raw)
         delta = (datetime.utcnow() - ultima).total_seconds() / 60
         print(f"⏱ Última alerta enviada hace {int(delta)} minutos.")
         return delta
@@ -85,7 +92,10 @@ def tiempo_desde_ultimo_resumen():
     try:
         with open(path, "r") as f:
             data = json.load(f)
-        ultimo = datetime.fromisoformat(data.get("ultimo", "2000-01-01T00:00:00"))
+        ultimo_raw = data.get("ultimo")
+        if not ultimo_raw:
+            raise ValueError("Campo 'ultimo' no encontrado")
+        ultimo = datetime.fromisoformat(ultimo_raw)
         delta = (datetime.utcnow() - ultimo).total_seconds() / 60
         print(f"📊 Último resumen enviado hace {int(delta)} minutos.")
         return delta
@@ -99,22 +109,52 @@ def encontrar_soporte_resistencia(close, periodo=14):
     return round(soporte, 2), round(resistencia, 2)
 
 def es_mercado_abierto():
-    ahora = datetime.utcnow()
-    return ahora.weekday() < 5 or "BTC-USD" in SYMBOLS
+    return True  # Forzar ejecución completa siempre
 
 def get_news_headlines(ticker, num_headlines=3):
     url = f"https://www.google.com/search?q={ticker}+stock&tbm=nws"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept-Language": "en-US,en;q=0.9"
+    }
+
+    try:
+        res = requests.get(url, headers=headers, timeout=7)
+        if res.status_code != 200:
+            print(f"⚠️ Error al buscar noticias de {ticker} - status {res.status_code}")
+            return []
+
+        soup = BeautifulSoup(res.text, 'html.parser')
+        containers = soup.select('div.dbsr')
+        if not containers:
+            print(f"⚠️ No se encontraron titulares para {ticker}.")
+            return []
+
+        headlines = []
+        for el in containers[:num_headlines]:
+            title_div = el.select_one('div.JheGif.nDgy9d')
+            if title_div:
+                headlines.append(title_div.text.strip())
+
+        return headlines
+
+    except Exception as e:
+        print(f"⚠️ Error al obtener noticias para {ticker}: {e}")
+        return []
+
+def get_news_headlines_bing(ticker, num_headlines=3):
+    url = f"https://www.bing.com/news/search?q={ticker}+stock"
     headers = {"User-Agent": "Mozilla/5.0"}
     try:
-        res = requests.get(url, headers=headers, timeout=5)
+        res = requests.get(url, headers=headers, timeout=7)
         soup = BeautifulSoup(res.text, 'html.parser')
-        headlines = [
-            el.select_one('div.JheGif.nDgy9d').text
-            for el in soup.select('div.dbsr')[:num_headlines]
-            if el.select_one('div.JheGif.nDgy9d')
-        ]
+        items = soup.select("a.title")[:num_headlines]
+        headlines = [item.text.strip() for item in items if item.text.strip()]
+        if not headlines:
+            print(f"⚠️ No se encontraron titulares en Bing para {ticker}")
         return headlines
-    except:
+    except Exception as e:
+        print(f"⚠️ Error en Bing News ({ticker}): {e}")
         return []
 
 def analizar_sentimiento_vader(titulares):
@@ -177,10 +217,10 @@ def analizar_intradía(ticker):
         if df.empty or len(df) < 30 or float(df["Volume"].squeeze().iloc[-1]) == 0:
             return None, None
 
-        close = df["Close"].squeeze()
-        low = df["Low"].squeeze()
-        high = df["High"].squeeze()
-        volume = df["Volume"].squeeze()
+        close = df["Close"]
+        low = df["Low"]
+        high = df["High"]
+        volume = df["Volume"]
 
         señales = []  # ✅ inicializado al principio
 
@@ -206,9 +246,17 @@ def analizar_intradía(ticker):
 
         volumen_fuerte = volume.iloc[-1] > volume.rolling(20).mean().iloc[-1] * 1.5
 
-        riesgo = close.iloc[-1] - min(low.iloc[-6:-1])
-        recompensa = max(high.iloc[-1:].repeat(6).values[0] - close.iloc[-1], 0)
-        rr = round(recompensa / riesgo, 2) if riesgo > 0 else "N/A"
+        precio_actual = close.iloc[-1]
+minimo_reciente = low[-6:-1].min()
+maximo_esperado = high[-6:].max()
+
+riesgo = round(precio_actual - minimo_reciente, 2)
+recompensa = round(maximo_esperado - precio_actual, 2)
+
+if riesgo <= 0 or recompensa <= 0:
+    rr = "No válido"
+else:
+    rr = round(recompensa / riesgo, 2)
 
         velas = close[-6:]
         cambios = velas.diff().dropna()
@@ -275,9 +323,10 @@ def enviar_imagen(path):
 
 def generar_grafico(df, ticker):
     plt.figure(figsize=(10, 4))
-    plt.plot(df["Close"].squeeze(), label="Precio", linewidth=1.2)
-    plt.plot(ta.trend.EMAIndicator(df["Close"].squeeze(), window=9).ema_indicator(), label="EMA9")
-    plt.plot(ta.trend.EMAIndicator(df["Close"].squeeze(), window=21).ema_indicator(), label="EMA21")
+   close = df["Close"]
+    plt.plot(close, label="Precio", linewidth=1.2)
+    plt.plot(ta.trend.EMAIndicator(close, window=9).ema_indicator(), label="EMA9")
+    plt.plot(ta.trend.EMAIndicator(close, window=21).ema_indicator(), label="EMA21")
     plt.title(f"{ticker} - Intradía 5m")
     plt.legend()
     plt.grid()
@@ -287,8 +336,9 @@ def generar_grafico(df, ticker):
     return filename
 
 # Ejecución principal
+candidatos = []
+
 if es_mercado_abierto():
-    candidatos = []
 
     for ticker in SYMBOLS:
         print(f"🔍 Evaluando {ticker}...")
@@ -322,7 +372,9 @@ if es_mercado_abierto():
             take_profit = round(take_profit, 2)
 
             titulares = get_news_headlines(mejor["ticker"])
-            resumen_noticia = analizar_sentimiento_vader(titulares)
+            if not titulares:
+                print("🔁 Usando Bing como respaldo para titulares.")
+                titulares = get_news_headlines_bing(mejor["ticker"])
 
             mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
 {'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
