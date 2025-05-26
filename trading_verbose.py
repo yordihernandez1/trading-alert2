@@ -172,9 +172,9 @@ def analizar_tecnico_diario(ticker):
         df = yf.download(ticker, period="3mo", interval="1d", auto_adjust=True, progress=False)
         if df.empty or len(df) < 50:
             return None
-        close = df["Close"].squeeze()
-        high = df["High"].squeeze()
-        low = df["Low"].squeeze()
+        close = df["Close"]
+        high = df["High"]
+        low = df["Low"]
 
         rsi = ta.momentum.RSIIndicator(close).rsi()
         macd = ta.trend.MACD(close)
@@ -208,8 +208,9 @@ def analizar_tecnico_diario(ticker):
             "resistencia": resistencia,
             "señales": señales
         }
-    except:
-        return None
+    except Exception as e:
+    print(f"❌ Error en análisis diario de {ticker}: {e}")
+    return None
 
 def analizar_intradía(ticker):
     try:
@@ -321,7 +322,7 @@ def enviar_imagen(path):
 
 def generar_grafico(df, ticker):
     plt.figure(figsize=(10, 4))
-   close = df["Close"]
+    close = df["Close"]
     plt.plot(close, label="Precio", linewidth=1.2)
     plt.plot(ta.trend.EMAIndicator(close, window=9).ema_indicator(), label="EMA9")
     plt.plot(ta.trend.EMAIndicator(close, window=21).ema_indicator(), label="EMA21")
@@ -336,7 +337,7 @@ def generar_grafico(df, ticker):
 # Ejecución principal
 candidatos = []
 
-if es_mercado_abierto():
+if es_mercado_abierto(): 
 
     for ticker in SYMBOLS:
         print(f"🔍 Evaluando {ticker}...")
@@ -373,6 +374,8 @@ if es_mercado_abierto():
             if not titulares:
                 print("🔁 Usando Bing como respaldo para titulares.")
                 titulares = get_news_headlines_bing(mejor["ticker"])
+
+            resumen_noticia = analizar_sentimiento_vader(titulares)
 
             mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
 {'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
