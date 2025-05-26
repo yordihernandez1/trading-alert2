@@ -18,30 +18,10 @@ if not CHAT_ID:
     raise ValueError("❌ CHAT_ID no está definido. Asegúrate de configurarlo como variable de entorno.")
 
 SYMBOLS = [
-    # ACCIONES VOLÁTILES (alta actividad en días hábiles)
-    "TSLA",     # Tesla – volatilidad brutal
-    "NVDA",     # Nvidia – fuerte tendencia y noticias constantes
-    "AMD",      # AMD – correlación con NVDA
-    "META",     # Meta – mueve volumen y responde bien a técnicos
-    "AMZN",     # Amazon – ideal para análisis por volumen
-
-    # ETFs ESTRATÉGICOS
-    "SPY",      # S&P 500 general
-    "QQQ",      # Nasdaq 100
-    "TQQQ",     # Nasdaq apalancado (ideal para señales rápidas)
-    "SQQQ",     # Inverso del Nasdaq (entrada bajista fácil)
-
-    # CRIPTO (operables 24/7)
-    "BTC-USD",  # Bitcoin – volatilidad diaria
-    "ETH-USD",  # Ethereum – correlación con BTC, algo más estable
-    "SOL-USD",  # Solana – movimientos más amplios
-
-    # ÍNDICES CLÁSICOS
-    "^GSPC",    # S&P 500
-    "^IXIC",    # Nasdaq Composite
-
-    # MATERIAS PRIMAS
-    "GC=F"      # Oro – activo defensivo útil cuando el mercado está plano
+    "^IXIC",     # Nasdaq Composite
+    "TSLA",      # Tesla – volatilidad brutal
+    "NVDA",      # Nvidia – fuerte tendencia
+    "BTC-USD"    # Bitcoin – activo 24/7
 ]
 
 RSI_SOBRECOMPRA = 70
