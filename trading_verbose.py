@@ -281,7 +281,7 @@ if es_mercado_abierto():
     if candidatos:
         mejor = max(candidatos, key=lambda r: r["prob_total"])
         if mejor["prob_total"] >= UMBRAL_ALERTA:
-    entrada = mejor["diario"]["precio"]
+            entrada = mejor["diario"]["precio"]
 
     if mejor["intradia"]["direccion"] == "subida":
         stop = mejor["diario"]["soporte"]
@@ -323,6 +323,7 @@ if es_mercado_abierto():
     registrar_alerta()
     img_path = generar_grafico(mejor["df"], mejor["ticker"])
     enviar_imagen(img_path)
+
 
     else:
         minutos_alerta = tiempo_desde_ultima_alerta()
