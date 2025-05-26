@@ -320,10 +320,10 @@ if es_mercado_abierto():
 {resumen_noticia}
 """
 
-    enviar_telegram(mensaje)
-    registrar_alerta()
-    img_path = generar_grafico(mejor["df"], mejor["ticker"])
-    enviar_imagen(img_path)
+            enviar_telegram(mensaje)
+            registrar_alerta()
+            img_path = generar_grafico(mejor["df"], mejor["ticker"])
+            enviar_imagen(img_path)
 
 else:
     minutos_alerta = tiempo_desde_ultima_alerta()
