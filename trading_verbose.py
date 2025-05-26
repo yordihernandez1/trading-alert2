@@ -156,6 +156,8 @@ def analizar_intradía(ticker):
         high = df["High"].squeeze()
         volume = df["Volume"].squeeze()
 
+        señales = []
+
         ema9 = ta.trend.EMAIndicator(close, window=9).ema_indicator()
         ema21 = ta.trend.EMAIndicator(close, window=21).ema_indicator()
         rsi = ta.momentum.RSIIndicator(close).rsi()
