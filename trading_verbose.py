@@ -255,25 +255,10 @@ def analizar_intradía(ticker):
 
         if riesgo <= 0 or recompensa <= 0:
             rr = "No válido"
+            tiempo_estimado = "N/A"
         else:
             rr = round(recompensa / riesgo, 2)
 
-        # (continúa con señales, dirección, etc...)
-
-    except Exception as e:
-        print(f"❌ Error intradía {ticker}: {e}")
-        return None, None
-
-        riesgo = round(precio_actual - minimo_reciente, 2)
-        recompensa = round(maximo_esperado - precio_actual, 2)
-
-        if riesgo <= 0 or recompensa <= 0:
-            rr = "No válido"
-            tiempo_estimado = "N/A"
-        else:
-         rr = round(recompensa / riesgo, 2)
-
-            # Velocidad media para estimar tiempo de ganancia
             velas = close[-6:]
             cambios = velas.diff().dropna()
 
@@ -316,10 +301,10 @@ def analizar_intradía(ticker):
             "tiempo_estimado": tiempo_estimado,
             "direccion": "subida" if prob_sube >= prob_baja else "bajada"
         }, df
+
     except Exception as e:
         print(f"❌ Error intradía {ticker}: {e}")
         return None, None
-
 
 def enviar_telegram(mensaje):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
