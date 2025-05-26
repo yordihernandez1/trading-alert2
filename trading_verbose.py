@@ -194,7 +194,11 @@ def analizar_tecnico_diario(ticker):
 
 def analizar_intradía(ticker):
     try:
-        df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
+        if ticker == "BTC-USD":
+            df = yf.download(ticker, period="1d", interval="5m", auto_adjust=True, progress=False)
+        else:
+            df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
+            
         if df.empty or len(df) < 30 or df["Volume"].iloc[-1].item() == 0:
             return None, None
 
