@@ -156,7 +156,7 @@ def analizar_intradía(ticker):
         high = df["High"].squeeze()
         volume = df["Volume"].squeeze()
 
-        señales = []
+        señales = []  # ✅ inicializado al principio
 
         ema9 = ta.trend.EMAIndicator(close, window=9).ema_indicator()
         ema21 = ta.trend.EMAIndicator(close, window=21).ema_indicator()
@@ -169,12 +169,14 @@ def analizar_intradía(ticker):
             cruce_ema = "Cruce bajista EMA9/21"
 
         rsi_val = rsi.iloc[-1]
-        if rsi_val > RSI_SOBRECOMPRA:
-            señales.append("RSI en sobrecompra")
-        elif rsi_val < RSI_SOBREVENTA:
-            señales.append("RSI en sobreventa")
+        if rsi_val >= RSI_SOBRECOMPRA:
+            zona_rsi = "Sobrecompra"
+        elif rsi_val <= RSI_SOBREVENTA:
+            zona_rsi = "Sobreventa"
         else:
-            señales.append(f"RSI en zona neutral ({round(rsi_val, 1)})")
+            zona_rsi = "Neutral"
+
+        señales.append(f"RSI en zona {zona_rsi.lower()} ({round(rsi_val, 1)})")
 
         volumen_fuerte = volume.iloc[-1] > volume.rolling(20).mean().iloc[-1] * 1.5
 
@@ -198,7 +200,6 @@ def analizar_intradía(ticker):
         else:
             tiempo_estimado = "N/A"
 
-        señales = []
         prob_sube = prob_baja = 0
 
         if cruce_ema == "Cruce alcista EMA9/21":
@@ -231,6 +232,7 @@ def analizar_intradía(ticker):
     except Exception as e:
         print(f"❌ Error intradía {ticker}: {e}")
         return None, None
+
 
 def enviar_telegram(mensaje):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
