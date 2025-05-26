@@ -209,8 +209,8 @@ def analizar_tecnico_diario(ticker):
             "señales": señales
         }
     except Exception as e:
-    print(f"❌ Error en análisis diario de {ticker}: {e}")
-    return None
+        print(f"❌ Error en análisis diario de {ticker}: {e}")
+        return None
 
 def analizar_intradía(ticker):
     try:
