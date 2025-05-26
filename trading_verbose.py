@@ -13,7 +13,33 @@ from pathlib import Path
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 
-SYMBOLS = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
+SYMBOLS = [
+    # ACCIONES VOLÁTILES (alta actividad en días hábiles)
+    "TSLA",     # Tesla – volatilidad brutal
+    "NVDA",     # Nvidia – fuerte tendencia y noticias constantes
+    "AMD",      # AMD – correlación con NVDA
+    "META",     # Meta – mueve volumen y responde bien a técnicos
+    "AMZN",     # Amazon – ideal para análisis por volumen
+
+    # ETFs ESTRATÉGICOS
+    "SPY",      # S&P 500 general
+    "QQQ",      # Nasdaq 100
+    "TQQQ",     # Nasdaq apalancado (ideal para señales rápidas)
+    "SQQQ",     # Inverso del Nasdaq (entrada bajista fácil)
+
+    # CRIPTO (operables 24/7)
+    "BTC-USD",  # Bitcoin – volatilidad diaria
+    "ETH-USD",  # Ethereum – correlación con BTC, algo más estable
+    "SOL-USD",  # Solana – movimientos más amplios
+
+    # ÍNDICES CLÁSICOS
+    "^GSPC",    # S&P 500
+    "^IXIC",    # Nasdaq Composite
+
+    # MATERIAS PRIMAS
+    "GC=F"      # Oro – activo defensivo útil cuando el mercado está plano
+]
+
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
 UMBRAL_ALERTA = 50
