@@ -294,7 +294,6 @@ if es_mercado_abierto():
     stop = round(stop, 2)
     take_profit = round(take_profit, 2)
 
-    # Asegúrate de que esto está aquí dentro
     titulares = get_news_headlines(mejor["ticker"])
     resumen_noticia = analizar_sentimiento_vader(titulares)
 
@@ -320,10 +319,11 @@ if es_mercado_abierto():
 {resumen_noticia}
 """
 
-        enviar_telegram(mensaje)
-        registrar_alerta()
-        img_path = generar_grafico(mejor["df"], mejor["ticker"])
-        enviar_imagen(img_path)
+    enviar_telegram(mensaje)
+    registrar_alerta()
+    img_path = generar_grafico(mejor["df"], mejor["ticker"])
+    enviar_imagen(img_path)
+
     else:
         minutos_alerta = tiempo_desde_ultima_alerta()
         minutos_resumen = tiempo_desde_ultimo_resumen()
