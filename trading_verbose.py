@@ -215,7 +215,7 @@ def analizar_tecnico_diario(ticker):
 def analizar_intradía(ticker):
     try:
         df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
-        if df.empty or len(df) < 30 or df["Volume"].iloc[-1] == 0:
+        if df.empty or len(df) < 30 or df["Volume"].iloc[-1].item() == 0:
             return None, None
 
         close = df["Close"].squeeze()
@@ -268,7 +268,7 @@ def analizar_intradía(ticker):
             else:
                 velocidad = abs(cambios[cambios < 0].mean())
 
-            if velocidad and velocidad > 0:
+            if velocidad is not None and isinstance(velocidad, (float, int)) and velocidad > 0:
                 tiempo_estimado = round((recompensa / velocidad) * 5)
             else:
                 tiempo_estimado = "N/A"
