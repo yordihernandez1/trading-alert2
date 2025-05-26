@@ -16,7 +16,7 @@ CHAT_ID = os.environ.get("CHAT_ID")
 SYMBOLS = ["TSLA", "AAPL", "NVDA", "AMD", "BTC-USD", "^IXIC"]
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
-UMBRAL_ALERTA = 50
+UMBRAL_ALERTA = 0
 LOG_ALERTA = "ultima_alerta.json"
 TIEMPO_RESUMEN_MINUTOS = 30
 
@@ -168,11 +168,11 @@ def analizar_intradía(ticker):
 
         rsi_val = rsi.iloc[-1]
         if rsi_val > RSI_SOBRECOMPRA:
-        señales.append("RSI en sobrecompra")
+            señales.append("RSI en sobrecompra")
         elif rsi_val < RSI_SOBREVENTA:
-        señales.append("RSI en sobreventa")
+            señales.append("RSI en sobreventa")
         else:
-        señales.append(f"RSI en zona neutral ({round(rsi_val, 1)})")
+            señales.append(f"RSI en zona neutral ({round(rsi_val, 1)})")
 
         volumen_fuerte = volume.iloc[-1] > volume.rolling(20).mean().iloc[-1] * 1.5
 
