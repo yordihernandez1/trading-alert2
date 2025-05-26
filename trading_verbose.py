@@ -299,11 +299,7 @@ if es_mercado_abierto():
     resumen_noticia = analizar_sentimiento_vader(titulares)
 
     mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
-    ...
-    {resumen_noticia}
-    """
-
-{'🟢 Largo' if mejor['intradia']['direccion'] == 'subida' else '🔴 Corto'}
+{'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
 
 *Señales diarias:*
 {chr(10).join(f"- {s}" for s in mejor['diario']['señales'])}
@@ -311,16 +307,18 @@ if es_mercado_abierto():
 *Señales intradía:*
 {chr(10).join(f"- {s}" for s in mejor['intradia']['señales'])}
 
-📈 *Prob. subida:* {mejor['intradia']['prob_sube']}%
-📉 *Prob. bajada:* {mejor['intradia']['prob_baja']}%
-🎯 *Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}
-⏳ *Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min
-🔻 *Soporte:* {mejor['diario']['soporte']} | 🔺 *Resistencia:* {mejor['diario']['resistencia']}
-💵 *Entrada sugerida:* {entrada}  
-🛑 *Stop Loss:* {stop}  
-🎯 *Take Profit:* {take_profit}
-📰 *Noticias recientes:*
+*Prob. subida:* {mejor['intradia']['prob_sube']}%
+*Prob. bajada:* {mejor['intradia']['prob_baja']}%
+*Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}
+*Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min
+*Soporte:* {mejor['diario']['soporte']} | *Resistencia:* {mejor['diario']['resistencia']}
+*Entrada sugerida:* {entrada}  
+*Stop Loss:* {stop}  
+*Take Profit:* {take_profit}
+
+*Noticias recientes:*
 {resumen_noticia}
+"""
 
         enviar_telegram(mensaje)
         registrar_alerta()
