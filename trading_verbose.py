@@ -113,7 +113,7 @@ def es_mercado_abierto():
 
 def get_news_headlines(ticker, num_headlines=3):
     url = f"https://www.google.com/search?q={ticker}+stock&tbm=nws"
-    headers = {
+    headers = { 
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         "Accept-Language": "en-US,en;q=0.9"
     }
@@ -172,9 +172,9 @@ def analizar_tecnico_diario(ticker):
         df = yf.download(ticker, period="3mo", interval="1d", auto_adjust=True, progress=False)
         if df.empty or len(df) < 50:
             return None
-        close = df["Close"]
-        high = df["High"]
-        low = df["Low"]
+        close = df["Close"].squeeze()
+        high = df["High"].squeeze()
+        low = df["Low"].squeeze()
 
         rsi = ta.momentum.RSIIndicator(close).rsi()
         macd = ta.trend.MACD(close)
@@ -215,13 +215,13 @@ def analizar_tecnico_diario(ticker):
 def analizar_intradía(ticker):
     try:
         df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
-        if df.empty or len(df) < 30 or float(df["Volume"].iloc[-1]) == 0:
+        if df.empty or len(df) < 30 or df["Volume"].iloc[-1] == 0:
             return None, None
 
-        close = df["Close"]
-        low = df["Low"]
-        high = df["High"]
-        volume = df["Volume"]
+        close = df["Close"].squeeze()
+        low = df["Low"].squeeze()
+        high = df["High"].squeeze()
+        volume = df["Volume"].squeeze()
 
         señales = []
 
