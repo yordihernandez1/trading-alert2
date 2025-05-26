@@ -264,18 +264,19 @@ def analizar_intradía(ticker):
         print(f"❌ Error intradía {ticker}: {e}")
         return None, None
 
-riesgo = round(precio_actual - minimo_reciente, 2)
-recompensa = round(maximo_esperado - precio_actual, 2)
+        riesgo = round(precio_actual - minimo_reciente, 2)
+        recompensa = round(maximo_esperado - precio_actual, 2)
 
-if riesgo <= 0 or recompensa <= 0:
-    rr = "No válido"
-else:
-    rr = round(recompensa / riesgo, 2)
+        if riesgo <= 0 or recompensa <= 0:
+            rr = "No válido"
+            tiempo_estimado = "N/A"
+        else:
+         rr = round(recompensa / riesgo, 2)
 
-        velas = close[-6:]
-        cambios = velas.diff().dropna()
+            # Velocidad media para estimar tiempo de ganancia
+            velas = close[-6:]
+            cambios = velas.diff().dropna()
 
-        if riesgo > 0:
             if cruce_ema == "Cruce alcista EMA9/21":
                 velocidad = cambios[cambios > 0].mean()
             else:
@@ -285,8 +286,6 @@ else:
                 tiempo_estimado = round((recompensa / velocidad) * 5)
             else:
                 tiempo_estimado = "N/A"
-        else:
-            tiempo_estimado = "N/A"
 
         prob_sube = prob_baja = 0
 
