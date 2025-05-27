@@ -361,7 +361,8 @@ if es_mercado_abierto():
         diario = analizar_tecnico_diario(ticker)
         intradia, df = analizar_intradía(ticker)
         if diario and intradia:
-            prob_total = max(intradia["prob_sube"], intradia["prob_baja"])
+            raw_prob_total = max(intradia["prob_sube"], intradia["prob_baja"])
+            prob_total = int((raw_prob_total / 60) * 100)  # 60 es el máximo teórico
             candidatos.append({
                 "ticker": ticker,
                 "diario": diario,
@@ -429,10 +430,26 @@ if es_mercado_abierto():
     if minutos_alerta >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= TIEMPO_RESUMEN_MINUTOS and candidatos:
         resumen = "⏱ *Sin alertas en los últimos 30 minutos.*\n\n*Probabilidades actuales:*\n\n"
         for c in candidatos:
-            resumen += f"{c['ticker']}: 📈 {c['intradia']['prob_sube']}% subida | 📉 {c['intradia']['prob_baja']}% bajada\n"
+            raw_sube = c['intradia']['prob_sube']
+            raw_baja = c['intradia']['prob_baja']
+            resumen += f"{c['ticker']}: 📈 {int((raw_sube / 60) * 100)}% subida | 📉 {int((raw_baja / 60) * 100)}% bajada\n"
         enviar_telegram(resumen)
         registrar_resumen()
     else:
         print("🕒 No se envía resumen: mercado abierto pero dentro del margen o sin candidatos.")
 else:
     print("🔕 Mercado cerrado: no se envía resumen.")
+    
+elif candidatos:
+    moderados = [c for c in candidatos if 40 <= c["prob_total"] < UMBRAL_ALERTA]
+    if moderados:
+        moderado = max(moderados, key=lambda r: r["prob_total"])
+        señales = "\n".join(f"- {s}" for s in moderado["intradia"]["señales"])
+        mensaje_moderado = f"""⚠️ *Oportunidad moderada: {moderado['ticker']}*
+Probabilidad estimada: {moderado['prob_total']}%
+
+*Señales intradía:*
+{señales}
+
+No se envía como alerta principal por debajo del umbral ({UMBRAL_ALERTA}%)."""
+        enviar_telegram(mensaje_moderado)
