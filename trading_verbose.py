@@ -322,7 +322,7 @@ def enviar_imagen(path):
 
 def generar_grafico(df, ticker):
     plt.figure(figsize=(10, 4))
-    close = df["Close"]
+    close = df["Close"].squeeze
     plt.plot(close, label="Precio", linewidth=1.2)
     plt.plot(ta.trend.EMAIndicator(close, window=9).ema_indicator(), label="EMA9")
     plt.plot(ta.trend.EMAIndicator(close, window=21).ema_indicator(), label="EMA21")
