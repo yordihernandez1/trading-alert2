@@ -440,8 +440,7 @@ if es_mercado_abierto():
 else:
     print("🔕 Mercado cerrado: no se envía resumen.")
     
-elif candidatos:
-    moderados = [c for c in candidatos if 40 <= c["prob_total"] < UMBRAL_ALERTA]
+moderados = [c for c in candidatos if 40 <= c["prob_total"] < UMBRAL_ALERTA]
     if moderados:
         moderado = max(moderados, key=lambda r: r["prob_total"])
         señales = "\n".join(f"- {s}" for s in moderado["intradia"]["señales"])
@@ -451,5 +450,5 @@ Probabilidad estimada: {moderado['prob_total']}%
 *Señales intradía:*
 {señales}
 
-No se envía como alerta principal por debajo del umbral ({UMBRAL_ALERTA}%)."""
+No se envía como alerta principal por estar bajo el umbral ({UMBRAL_ALERTA}%)."""
         enviar_telegram(mensaje_moderado)
