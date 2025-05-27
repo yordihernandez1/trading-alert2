@@ -45,7 +45,7 @@ SYMBOLS = [
 
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
-UMBRAL_ALERTA = 0
+UMBRAL_ALERTA = 50
 LOG_ALERTA = "ultima_alerta.json"
 TIEMPO_RESUMEN_MINUTOS = 30
 
@@ -159,7 +159,7 @@ def get_news_headlines_bing(ticker, num_headlines=3):
 def analizar_sentimiento_vader(titulares):
     if not titulares:
         return "Sin noticias recientes."
-    sia = SentimentIntensityAnalyzer()
+    sia = SentimentIntensityAnalyzer(lexicon_file="vader_lexicon.txt")
     text = " ".join(titulares)
     score = sia.polarity_scores(text)["compound"]
     sentimiento = "Positivo" if score >= 0.05 else "Negativo" if score <= -0.05 else "Neutro"
