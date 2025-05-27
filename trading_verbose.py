@@ -436,18 +436,20 @@ if es_mercado_abierto():
         enviar_telegram(resumen)
         registrar_resumen()
     else:
-    print("🕒 No se envía resumen: mercado abierto pero dentro del margen o sin candidatos.")
+        print("🕒 No se envía resumen: mercado abierto pero dentro del margen o sin candidatos.")
 
-    # ⚠️ Alerta moderada si no se superó el umbral
-    moderados = [c for c in candidatos if 40 <= c["prob_total"] < UMBRAL_ALERTA]
-    if moderados:
-        moderado = max(moderados, key=lambda r: r["prob_total"])
-        señales = "\n".join(f"- {s}" for s in moderado["intradia"]["señales"])
-        mensaje_moderado = f"""⚠️ *Oportunidad moderada: {moderado['ticker']}*
+        # ⚠️ Alerta moderada si no se superó el umbral
+        moderados = [c for c in candidatos if 40 <= c["prob_total"] < UMBRAL_ALERTA]
+        if moderados:
+            moderado = max(moderados, key=lambda r: r["prob_total"])
+            señales = "\n".join(f"- {s}" for s in moderado["intradia"]["señales"])
+            mensaje_moderado = f"""⚠️ *Oportunidad moderada: {moderado['ticker']}*
 Probabilidad estimada: {moderado['prob_total']}%
 
 *Señales intradía:*
 {señales}
 
 No se envía como alerta principal por estar bajo el umbral ({UMBRAL_ALERTA}%)."""
-        enviar_telegram(mensaje_moderado)
+            enviar_telegram(mensaje_moderado)
+else:
+    print("🔕 Mercado cerrado: no se envía resumen.")
