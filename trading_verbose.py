@@ -436,11 +436,10 @@ if es_mercado_abierto():
         enviar_telegram(resumen)
         registrar_resumen()
     else:
-        print("🕒 No se envía resumen: mercado abierto pero dentro del margen o sin candidatos.")
-else:
-    print("🔕 Mercado cerrado: no se envía resumen.")
-    
-moderados = [c for c in candidatos if 40 <= c["prob_total"] < UMBRAL_ALERTA]
+    print("🕒 No se envía resumen: mercado abierto pero dentro del margen o sin candidatos.")
+
+    # ⚠️ Alerta moderada si no se superó el umbral
+    moderados = [c for c in candidatos if 40 <= c["prob_total"] < UMBRAL_ALERTA]
     if moderados:
         moderado = max(moderados, key=lambda r: r["prob_total"])
         señales = "\n".join(f"- {s}" for s in moderado["intradia"]["señales"])
