@@ -45,7 +45,7 @@ SYMBOLS = [
 
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
-UMBRAL_ALERTA = 0
+UMBRAL_ALERTA = 50
 LOG_ALERTA = "ultima_alerta.json"
 TIEMPO_RESUMEN_MINUTOS = 30
 
@@ -322,10 +322,16 @@ def enviar_imagen(path):
 
 def generar_grafico(df, ticker):
     plt.figure(figsize=(10, 4))
-    close = df["Close"].squeeze
+
+    close = df["Close"].squeeze()
+
+    ema9 = ta.trend.EMAIndicator(close, window=9).ema_indicator()
+    ema21 = ta.trend.EMAIndicator(close, window=21).ema_indicator()
+
     plt.plot(close, label="Precio", linewidth=1.2)
-    plt.plot(ta.trend.EMAIndicator(close, window=9).ema_indicator(), label="EMA9")
-    plt.plot(ta.trend.EMAIndicator(close, window=21).ema_indicator(), label="EMA21")
+    plt.plot(ema9, label="EMA9")
+    plt.plot(ema21, label="EMA21")
+
     plt.title(f"{ticker} - Intradía 5m")
     plt.legend()
     plt.grid()
