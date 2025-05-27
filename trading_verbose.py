@@ -18,9 +18,29 @@ if not CHAT_ID:
     raise ValueError("❌ CHAT_ID no está definido. Asegúrate de configurarlo como variable de entorno.")
 
 SYMBOLS = [
-    "^IXIC",     # Nasdaq Composite
-    "TSLA",      # Tesla – volatilidad brutal
-    "NVDA",      # Nvidia – fuerte tendencia
+    # ACCIONES VOLÁTILES
+    "TSLA",     # Tesla
+    "NVDA",     # Nvidia
+    "AMD",      # AMD – correlación con NVDA
+    "META",     # Meta
+    "AMZN",     # Amazon
+
+    # ETFs ESTRATÉGICOS
+    "SPY",      # S&P 500
+    "QQQ",      # Nasdaq 100
+    "TQQQ",     # Nasdaq apalancado
+    "SQQQ",     # Nasdaq inverso
+
+    # CRIPTO (sin BTC)
+    "ETH-USD",  # Ethereum
+    "SOL-USD",  # Solana
+
+    # ÍNDICES
+    "^GSPC",    # S&P 500
+    "^IXIC",    # Nasdaq Composite
+
+    # MATERIAS PRIMAS
+    "GC=F"      # Oro
 ]
 
 RSI_SOBRECOMPRA = 70
