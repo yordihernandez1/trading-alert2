@@ -45,7 +45,7 @@ SYMBOLS = [
 
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
-UMBRAL_ALERTA = 0
+UMBRAL_ALERTA = 50
 LOG_ALERTA = "ultima_alerta.json"
 TIEMPO_RESUMEN_MINUTOS = 30
 
@@ -107,8 +107,19 @@ def encontrar_soporte_resistencia(close, periodo=14):
     resistencia = max(close[-periodo:])
     return round(soporte, 2), round(resistencia, 2)
 
+from datetime import datetime, time
+
 def es_mercado_abierto():
-    return True  # Forzar ejecución completa siempre
+    ahora = datetime.utcnow()
+    # Días de semana: 0 = lunes, ..., 4 = viernes
+    if ahora.weekday() >= 5:
+        return False
+
+    hora_actual = ahora.time()
+    apertura = time(14, 30)  # 14:30 UTC
+    cierre = time(21, 0)     # 21:00 UTC
+
+    return apertura <= hora_actual <= cierre
 
 def get_news_headlines(ticker, num_headlines=3):
     url = f"https://www.google.com/search?q={ticker}+stock&tbm=nws"
