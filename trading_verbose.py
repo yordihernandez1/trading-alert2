@@ -21,7 +21,6 @@ SYMBOLS = [
     "^IXIC",     # Nasdaq Composite
     "TSLA",      # Tesla – volatilidad brutal
     "NVDA",      # Nvidia – fuerte tendencia
-    "BTC-USD"    # Bitcoin – activo 24/7
 ]
 
 RSI_SOBRECOMPRA = 70
@@ -194,11 +193,8 @@ def analizar_tecnico_diario(ticker):
 
 def analizar_intradía(ticker):
     try:
-        if ticker == "BTC-USD":
-            df = yf.download(ticker, period="1d", interval="5m", auto_adjust=True, progress=False)
-        else:
-            df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
-            
+        df = yf.download(ticker, period="2d", interval="5m", auto_adjust=True, progress=False)
+
         if df.empty or len(df) < 30 or df["Volume"].iloc[-1].item() == 0:
             return None, None
 
