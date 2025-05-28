@@ -431,7 +431,7 @@ if True:
             resumen_noticia = analizar_sentimiento_vader(titulares)
 
             mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
-    {'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
+            {'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
 
     *Señales diarias:*
     {chr(10).join(f"- {s}" for s in mejor['diario']['señales'])}
