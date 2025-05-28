@@ -415,20 +415,20 @@ if True():
         mejor = max(candidatos, key=lambda r: r["prob_total"])
 
         if mejor["prob_total"] >= UMBRAL_ALERTA:
-            entrada = mejor["entrada"]
-            stop = mejor["stop"]
-            take_profit = mejor["take_profit"]
-            stop_pct = mejor["stop_pct"]
-            tp_pct = mejor["tp_pct"]
+    entrada = mejor["entrada"]
+    stop = mejor["stop"]
+    take_profit = mejor["take_profit"]
+    stop_pct = mejor["stop_pct"]
+    tp_pct = mejor["tp_pct"]
 
-            titulares = get_news_headlines(mejor["ticker"])
-            if not titulares:
-                print("🔁 Usando Bing como respaldo para titulares.")
-                titulares = get_news_headlines_bing(mejor["ticker"])
+    titulares = get_news_headlines(mejor["ticker"])
+    if not titulares:
+        print("🔁 Usando Bing como respaldo para titulares.")
+        titulares = get_news_headlines_bing(mejor["ticker"])
 
-resumen_noticia = analizar_sentimiento_vader(titulares)
+    resumen_noticia = analizar_sentimiento_vader(titulares)
 
-mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
+    mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
 {'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
 
 *Señales diarias:*
@@ -451,38 +451,7 @@ mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
 {resumen_noticia}
 """
 
-        enviar_telegram(mensaje)
-        registrar_alerta()
-        img_path = generar_grafico(mejor["df"], mejor["ticker"])
-        enviar_imagen(img_path)
-
-if es_mercado_abierto():
-    minutos_alerta = tiempo_desde_ultima_alerta()
-    minutos_resumen = tiempo_desde_ultimo_resumen()
-
-    if True
-        resumen = "⏱ *Sin alertas en los últimos 30 minutos.*\n\n*Probabilidades actuales:*\n\n"
-        for c in candidatos:
-            raw_sube = c['intradia']['prob_sube']
-            raw_baja = c['intradia']['prob_baja']
-            resumen += f"{c['ticker']}: 📈 {int((raw_sube / 60) * 100)}% subida | 📉 {int((raw_baja / 60) * 100)}% bajada\n"
-        enviar_telegram(resumen)
-        registrar_resumen()
-    else:
-        print("🕒 No se envía resumen: mercado abierto pero dentro del margen o sin candidatos.")
-
-        # ⚠️ Alerta moderada si no se superó el umbral
-        moderados = [c for c in candidatos if 40 <= c["prob_total"] < UMBRAL_ALERTA]
-        if moderados:
-            moderado = max(moderados, key=lambda r: r["prob_total"])
-            señales = "\n".join(f"- {s}" for s in moderado["intradia"]["señales"])
-            mensaje_moderado = f"""⚠️ *Oportunidad moderada: {moderado['ticker']}*
-Probabilidad estimada: {moderado['prob_total']}%
-
-*Señales intradía:*
-{señales}
-
-No se envía como alerta principal por estar bajo el umbral ({UMBRAL_ALERTA}%)."""
-            enviar_telegram(mensaje_moderado)
-else:
-    print("🔕 Mercado cerrado: no se envía resumen.")
+    enviar_telegram(mensaje)
+    registrar_alerta()
+    img_path = generar_grafico(mejor["df"], mejor["ticker"])
+    enviar_imagen(img_path)
