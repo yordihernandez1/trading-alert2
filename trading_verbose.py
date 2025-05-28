@@ -354,7 +354,7 @@ def generar_grafico(df, ticker):
 # Ejecución principal
 candidatos = []
 
-if True(): 
+if True: 
 
     for ticker in SYMBOLS:
         print(f"🔍 Evaluando {ticker}...")
@@ -415,43 +415,43 @@ if True():
         mejor = max(candidatos, key=lambda r: r["prob_total"])
 
         if mejor["prob_total"] >= UMBRAL_ALERTA:
-    entrada = mejor["entrada"]
-    stop = mejor["stop"]
-    take_profit = mejor["take_profit"]
-    stop_pct = mejor["stop_pct"]
-    tp_pct = mejor["tp_pct"]
+            entrada = mejor["entrada"]
+            stop = mejor["stop"]
+            take_profit = mejor["take_profit"]
+            stop_pct = mejor["stop_pct"]
+            tp_pct = mejor["tp_pct"]
 
-    titulares = get_news_headlines(mejor["ticker"])
-    if not titulares:
-        print("🔁 Usando Bing como respaldo para titulares.")
-        titulares = get_news_headlines_bing(mejor["ticker"])
+            titulares = get_news_headlines(mejor["ticker"])
+            if not titulares:
+                print("🔁 Usando Bing como respaldo para titulares.")
+                titulares = get_news_headlines_bing(mejor["ticker"])
 
-    resumen_noticia = analizar_sentimiento_vader(titulares)
+        resumen_noticia = analizar_sentimiento_vader(titulares)
 
-    mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
-{'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
+        mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
+    {'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
 
-*Señales diarias:*
-{chr(10).join(f"- {s}" for s in mejor['diario']['señales'])}
+    *Señales diarias:*
+    {chr(10).join(f"- {s}" for s in mejor['diario']['señales'])}
 
-*Señales intradía:*
-{chr(10).join(f"- {s}" for s in mejor['intradia']['señales'])}
+    *Señales intradía:*
+    {chr(10).join(f"- {s}" for s in mejor['intradia']['señales'])}
 
-📈 *Prob. subida:* {mejor['intradia']['prob_sube']}%  
-📉 *Prob. bajada:* {mejor['intradia']['prob_baja']}%  
-🎯 *Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}  
-⏳ *Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min  
+    📈 *Prob. subida:* {mejor['intradia']['prob_sube']}%  
+    📉 *Prob. bajada:* {mejor['intradia']['prob_baja']}%  
+    🎯 *Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}  
+    ⏳ *Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min  
 
-💵 *Entrada sugerida:* {entrada}  
-🔻 *Stop Loss:* {stop} ({stop_pct}%)  
-🎯 *Take Profit:* {take_profit} ({tp_pct}%)  
-📊 *Soporte:* {mejor['diario']['soporte']} | 📈 *Resistencia:* {mejor['diario']['resistencia']}  
+    💵 *Entrada sugerida:* {entrada}  
+    🔻 *Stop Loss:* {stop} ({stop_pct}%)  
+    🎯 *Take Profit:* {take_profit} ({tp_pct}%)  
+    📊 *Soporte:* {mejor['diario']['soporte']} | 📈 *Resistencia:* {mejor['diario']['resistencia']}  
 
-📰 *Noticias recientes:*
-{resumen_noticia}
-"""
+    📰 *Noticias recientes:*
+    {resumen_noticia}
+    """
 
-    enviar_telegram(mensaje)
-    registrar_alerta()
-    img_path = generar_grafico(mejor["df"], mejor["ticker"])
-    enviar_imagen(img_path)
+        enviar_telegram(mensaje)
+        registrar_alerta()
+        img_path = generar_grafico(mejor["df"], mejor["ticker"])
+        enviar_imagen(img_path)
