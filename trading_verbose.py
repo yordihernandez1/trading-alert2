@@ -354,49 +354,81 @@ def generar_grafico(df, ticker):
 # Ejecución principal
 candidatos = []
 
-if es_mercado_abierto(): 
+if True(): 
 
     for ticker in SYMBOLS:
         print(f"🔍 Evaluando {ticker}...")
         diario = analizar_tecnico_diario(ticker)
         intradia, df = analizar_intradía(ticker)
         if diario and intradia:
+            entrada = diario["precio"]
+            atr = diario["atr"]
+
+    # Parámetros de riesgo y beneficio
+            max_pct_stop = 0.015   # 1.5%
+            min_pct_tp   = 0.009   # 0.9%
+            max_pct_tp   = 0.02    # 2%
+
+    # Distancias
+            max_stop_dist = entrada * max_pct_stop
+            stop_dist = min(atr, max_stop_dist)
+            tp_dist = stop_dist * 1.5
+            tp_dist = min(max(entrada * min_pct_tp, tp_dist), entrada * max_pct_tp)
+
+    # Dirección
+            if intradia["direccion"] == "subida":
+                stop = entrada - stop_dist
+                take_profit = entrada + tp_dist
+            else:
+                stop = entrada + stop_dist
+                take_profit = entrada - tp_dist
+
+    # Porcentajes
+            stop_pct = abs(entrada - stop) / entrada * 100
+            tp_pct = abs(take_profit - entrada) / entrada * 100
+
+    # Validar que la recompensa sea mayor al riesgo
+            if stop_pct >= tp_pct:
+                print(f"⚠️ {ticker} descartado: SL={round(stop_pct,2)}% >= TP={round(tp_pct,2)}%")
+                continue  # saltar este ticker
+
+    # Probabilidad total (normalizada)
             raw_prob_total = max(intradia["prob_sube"], intradia["prob_baja"])
-            prob_total = int((raw_prob_total / 60) * 100)  # 60 es el máximo teórico
-            candidatos.append({
-                "ticker": ticker,
-                "diario": diario,
-                "intradia": intradia,
-                "df": df,
-                "prob_total": prob_total
-            })
-            print(f"✅ Análisis completo para {ticker}")
+            prob_total = int((raw_prob_total / 60) * 100)
+
+    candidatos.append({
+        "ticker": ticker,
+        "diario": diario,
+        "intradia": intradia,
+        "df": df,
+        "prob_total": prob_total,
+        "entrada": round(entrada, 2),
+        "stop": round(stop, 2),
+        "take_profit": round(take_profit, 2),
+        "stop_pct": round(stop_pct, 2),
+        "tp_pct": round(tp_pct, 2)
+    })
+
+    print(f"✅ Análisis completo para {ticker}")
 
     if candidatos:
         mejor = max(candidatos, key=lambda r: r["prob_total"])
 
         if mejor["prob_total"] >= UMBRAL_ALERTA:
-            entrada = mejor["diario"]["precio"]
-
-            if mejor["intradia"]["direccion"] == "subida":
-                stop = mejor["diario"]["soporte"]
-                take_profit = entrada + (entrada - stop) * 2
-            else:
-                stop = mejor["diario"]["resistencia"]
-                take_profit = entrada - (stop - entrada) * 2
-
-            entrada = round(entrada, 2)
-            stop = round(stop, 2)
-            take_profit = round(take_profit, 2)
+            entrada = mejor["entrada"]
+            stop = mejor["stop"]
+            take_profit = mejor["take_profit"]
+            stop_pct = mejor["stop_pct"]
+            tp_pct = mejor["tp_pct"]
 
             titulares = get_news_headlines(mejor["ticker"])
             if not titulares:
                 print("🔁 Usando Bing como respaldo para titulares.")
                 titulares = get_news_headlines_bing(mejor["ticker"])
 
-            resumen_noticia = analizar_sentimiento_vader(titulares)
+resumen_noticia = analizar_sentimiento_vader(titulares)
 
-            mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
+mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
 {'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
 
 *Señales diarias:*
@@ -409,10 +441,11 @@ if es_mercado_abierto():
 📉 *Prob. bajada:* {mejor['intradia']['prob_baja']}%  
 🎯 *Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}  
 ⏳ *Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min  
-📊 *Soporte:* {mejor['diario']['soporte']} | 📈 *Resistencia:* {mejor['diario']['resistencia']}  
+
 💵 *Entrada sugerida:* {entrada}  
-🛑 *Stop Loss:* {stop}  
-🎯 *Take Profit:* {take_profit}  
+🔻 *Stop Loss:* {stop} ({stop_pct}%)  
+🎯 *Take Profit:* {take_profit} ({tp_pct}%)  
+📊 *Soporte:* {mejor['diario']['soporte']} | 📈 *Resistencia:* {mejor['diario']['resistencia']}  
 
 📰 *Noticias recientes:*
 {resumen_noticia}
@@ -427,7 +460,7 @@ if es_mercado_abierto():
     minutos_alerta = tiempo_desde_ultima_alerta()
     minutos_resumen = tiempo_desde_ultimo_resumen()
 
-    if minutos_alerta >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= TIEMPO_RESUMEN_MINUTOS and candidatos:
+    if True
         resumen = "⏱ *Sin alertas en los últimos 30 minutos.*\n\n*Probabilidades actuales:*\n\n"
         for c in candidatos:
             raw_sube = c['intradia']['prob_sube']
