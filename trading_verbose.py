@@ -451,7 +451,7 @@ if True:
     {resumen_noticia}
     """
 
-        enviar_telegram(mensaje)
-        registrar_alerta()
-        img_path = generar_grafico(mejor["df"], mejor["ticker"])
-        enviar_imagen(img_path)
+            enviar_telegram(mensaje)
+            registrar_alerta()
+            img_path = generar_grafico(mejor["df"], mejor["ticker"])
+            enviar_imagen(img_path)
