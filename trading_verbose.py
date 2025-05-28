@@ -420,9 +420,7 @@ if True:
             take_profit = mejor["take_profit"]
             stop_pct = mejor["stop_pct"]
             tp_pct = mejor["tp_pct"]
-        else:
-            print(f"📉 {mejor['ticker']} tiene {mejor['prob_total']}% de probabilidad. No supera el umbral.")
-
+        
             titulares = get_news_headlines(mejor["ticker"])
             if not titulares:
                 print("🔁 Usando Bing como respaldo para titulares.")
