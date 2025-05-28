@@ -426,7 +426,7 @@ if True:
                 print("🔁 Usando Bing como respaldo para titulares.")
                 titulares = get_news_headlines_bing(mejor["ticker"])
 
-        resumen_noticia = analizar_sentimiento_vader(titulares)
+            resumen_noticia = analizar_sentimiento_vader(titulares)
 
         mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
     {'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
