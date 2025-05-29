@@ -354,7 +354,7 @@ def generar_grafico(df, ticker):
 # Ejecución principal
 candidatos = []
 
-if True: 
+if es_mercado_abierto(): 
 
     for ticker in SYMBOLS:
         print(f"🔍 Evaluando {ticker}...")
@@ -410,6 +410,17 @@ if True:
     })
 
     print(f"✅ Análisis completo para {ticker}")
+
+    minutos_alerta = tiempo_desde_ultima_alerta()
+    minutos_resumen = tiempo_desde_ultimo_resumen()
+
+    if minutos_alerta >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= TIEMPO_RESUMEN_MINUTOS and candidatos:
+        resumen = "\n".join([
+            f"{c['ticker']} | Prob: {c['prob_total']}% | Dirección: {'↑' if c['intradia']['direccion'] == 'subida' else '↓'} | TP: {c['tp_pct']}% | SL: {c['stop_pct']}%"
+            for c in sorted(candidatos, key=lambda x: x["prob_total"], reverse=True)
+        ])
+        enviar_telegram(f"📊 *Resumen de oportunidades*\n\n{resumen}")
+        registrar_resumen()
 
     if candidatos:
         mejor = max(candidatos, key=lambda r: r["prob_total"])
