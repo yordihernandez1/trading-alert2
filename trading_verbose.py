@@ -415,7 +415,7 @@ if es_mercado_abierto():
     minutos_alerta = tiempo_desde_ultima_alerta()
     minutos_resumen = tiempo_desde_ultimo_resumen()
 
-    if minutos_alerta >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= TIEMPO_RESUMEN_MINUTOS and candidatos:
+    if minutos_alerta >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= minutos_alerta and candidatos:
         resumen = "\n".join([
             f"{c['ticker']} | Prob: {c['prob_total']}% | Dirección: {'↑' if c['intradia']['direccion'] == 'subida' else '↓'} | TP: {c['tp_pct']}% | SL: {c['stop_pct']}%"
             for c in sorted(candidatos, key=lambda x: x["prob_total"], reverse=True)
