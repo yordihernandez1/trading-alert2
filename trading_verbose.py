@@ -353,7 +353,8 @@ def generar_grafico(df, ticker):
 
 # Ejecución principal
 candidatos = []
-
+CRIPTOS = ["ETH-USD", "SOL-USD"]
+OTROS = [s for s in SYMBOLS if s not in CRIPTOS]
 if es_mercado_abierto(): 
 
     for ticker in SYMBOLS:
