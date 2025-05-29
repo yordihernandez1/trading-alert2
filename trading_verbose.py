@@ -419,6 +419,7 @@ if es_mercado_abierto():
         resumen = "\n".join([
             f"{c['ticker']} | Prob: {c['prob_total']}% | Dirección: {'↑' if c['intradia']['direccion'] == 'subida' else '↓'} | TP: {c['tp_pct']}% | SL: {c['stop_pct']}%"
             for c in sorted(candidatos, key=lambda x: x["prob_total"], reverse=True)
+            if c.get("intradia") is not None and c["intradia"].get("direccion") is not None
         ])
         enviar_telegram(f"📊 *Resumen de oportunidades*\n\n{resumen}")
         registrar_resumen()
