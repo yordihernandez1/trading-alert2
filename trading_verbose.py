@@ -45,7 +45,7 @@ SYMBOLS = [
 
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
-UMBRAL_ALERTA = 50
+UMBRAL_ALERTA = 30
 LOG_ALERTA = "ultima_alerta.json"
 TIEMPO_RESUMEN_MINUTOS = 30
 
@@ -355,28 +355,29 @@ def generar_grafico(df, ticker):
 candidatos = []
 CRIPTOS = ["ETH-USD", "SOL-USD"]
 OTROS = [s for s in SYMBOLS if s not in CRIPTOS]
-if es_mercado_abierto(): 
 
+if es_mercado_abierto(): 
     for ticker in SYMBOLS:
         print(f"🔍 Evaluando {ticker}...")
         diario = analizar_tecnico_diario(ticker)
         intradia, df = analizar_intradía(ticker)
+        
         if diario and intradia:
             entrada = diario["precio"]
             atr = diario["atr"]
 
-    # Parámetros de riesgo y beneficio
+            # Parámetros de riesgo y beneficio
             max_pct_stop = 0.015   # 1.5%
             min_pct_tp   = 0.009   # 0.9%
             max_pct_tp   = 0.02    # 2%
 
-    # Distancias
+            # Distancias
             max_stop_dist = entrada * max_pct_stop
             stop_dist = min(atr, max_stop_dist)
             tp_dist = stop_dist * 1.5
             tp_dist = min(max(entrada * min_pct_tp, tp_dist), entrada * max_pct_tp)
 
-    # Dirección
+            # Dirección
             if intradia["direccion"] == "subida":
                 stop = entrada - stop_dist
                 take_profit = entrada + tp_dist
@@ -384,33 +385,50 @@ if es_mercado_abierto():
                 stop = entrada + stop_dist
                 take_profit = entrada - tp_dist
 
-    # Porcentajes
+            # Porcentajes
             stop_pct = abs(entrada - stop) / entrada * 100
             tp_pct = abs(take_profit - entrada) / entrada * 100
 
-    # Validar que la recompensa sea mayor al riesgo
-            if stop_pct >= tp_pct:
-                print(f"⚠️ {ticker} descartado: SL={round(stop_pct,2)}% >= TP={round(tp_pct,2)}%")
-                continue  # saltar este ticker
+            # Validar que la recompensa sea mayor al riesgo
+            if tp_pct < stop_pct * 1.33:
+                print(f"⚠️ {ticker} descartado: TP ({round(tp_pct, 2)}%) < 1.33x SL ({round(stop_pct, 2)}%)")
+                continue
 
-    # Probabilidad total (normalizada)
+            # Señales adicionales
+            if diario["tendencia"] == "Alcista" and intradia["direccion"] == "subida":
+                intradia["prob_sube"] += 10
+            elif diario["tendencia"] == "Bajista" and intradia["direccion"] == "bajada":
+                intradia["prob_baja"] += 10
+
+            if intradia["direccion"] == "subida" and abs(diario["precio"] - diario["soporte"]) / diario["precio"] < 0.01:
+                intradia["prob_sube"] += 10
+            elif intradia["direccion"] == "bajada" and abs(diario["precio"] - diario["resistencia"]) / diario["precio"] < 0.01:
+                intradia["prob_baja"] += 10
+
+            if "Precio sobre SMA50" in diario["señales"] and "SMA50 sobre SMA200" in diario["señales"] and intradia["direccion"] == "subida":
+                intradia["prob_sube"] += 10
+            elif "Precio sobre SMA50" not in diario["señales"] and "SMA50 sobre SMA200" not in diario["señales"] and intradia["direccion"] == "bajada":
+                intradia["prob_baja"] += 10
+
+            # Probabilidad total
             raw_prob_total = max(intradia["prob_sube"], intradia["prob_baja"])
-            prob_total = int((raw_prob_total / 60) * 100)
+            prob_total = int((raw_prob_total / 40) * 100)
+            print(f"📊 {ticker} - Prob sube: {intradia['prob_sube']} | Prob baja: {intradia['prob_baja']} | Total: {prob_total}%")
 
-    candidatos.append({
-        "ticker": ticker,
-        "diario": diario,
-        "intradia": intradia,
-        "df": df,
-        "prob_total": prob_total,
-        "entrada": round(entrada, 2),
-        "stop": round(stop, 2),
-        "take_profit": round(take_profit, 2),
-        "stop_pct": round(stop_pct, 2),
-        "tp_pct": round(tp_pct, 2)
-    })
+            candidatos.append({
+                "ticker": ticker,
+                "diario": diario,
+                "intradia": intradia,
+                "df": df,
+                "prob_total": prob_total,
+                "entrada": round(entrada, 2),
+                "stop": round(stop, 2),
+                "take_profit": round(take_profit, 2),
+                "stop_pct": round(stop_pct, 2),
+                "tp_pct": round(tp_pct, 2)
+            })
 
-    print(f"✅ Análisis completo para {ticker}")
+            print(f"✅ Análisis completo para {ticker}")
 
     minutos_alerta = tiempo_desde_ultima_alerta()
     minutos_resumen = tiempo_desde_ultimo_resumen()
@@ -442,27 +460,27 @@ if es_mercado_abierto():
             resumen_noticia = analizar_sentimiento_vader(titulares)
 
             mensaje = f"""🚨 *Mejor oportunidad: {mejor['ticker']}*
-            {'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
+{'Largo' if mejor['intradia']['direccion'] == 'subida' else 'Corto'}
 
-    *Señales diarias:*
-    {chr(10).join(f"- {s}" for s in mejor['diario']['señales'])}
+*Señales diarias:*
+{chr(10).join(f"- {s}" for s in mejor['diario']['señales'])}
 
-    *Señales intradía:*
-    {chr(10).join(f"- {s}" for s in mejor['intradia']['señales'])}
+*Señales intradía:*
+{chr(10).join(f"- {s}" for s in mejor['intradia']['señales'])}
 
-    📈 *Prob. subida:* {mejor['intradia']['prob_sube']}%  
-    📉 *Prob. bajada:* {mejor['intradia']['prob_baja']}%  
-    🎯 *Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}  
-    ⏳ *Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min  
+📈 *Prob. subida:* {mejor['intradia']['prob_sube']}%  
+📉 *Prob. bajada:* {mejor['intradia']['prob_baja']}%  
+🎯 *Riesgo/Recompensa estimado:* {mejor['intradia']['rr']}  
+⏳ *Tiempo estimado para alcanzar ganancia:* {mejor['intradia']['tiempo_estimado']} min  
 
-    💵 *Entrada sugerida:* {entrada}  
-    🔻 *Stop Loss:* {stop} ({stop_pct}%)  
-    🎯 *Take Profit:* {take_profit} ({tp_pct}%)  
-    📊 *Soporte:* {mejor['diario']['soporte']} | 📈 *Resistencia:* {mejor['diario']['resistencia']}  
+💵 *Entrada sugerida:* {entrada}  
+🔻 *Stop Loss:* {stop} ({stop_pct}%)  
+🎯 *Take Profit:* {take_profit} ({tp_pct}%)  
+📊 *Soporte:* {mejor['diario']['soporte']} | 📈 *Resistencia:* {mejor['diario']['resistencia']}  
 
-    📰 *Noticias recientes:*
-    {resumen_noticia}
-    """
+📰 *Noticias recientes:*
+{resumen_noticia}
+"""
 
             enviar_telegram(mensaje)
             registrar_alerta()
