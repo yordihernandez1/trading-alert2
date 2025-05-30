@@ -256,7 +256,23 @@ def analizar_intradía(ticker):
 
         señales.append(f"RSI en zona {zona_rsi.lower()} ({round(rsi_val, 1)})")
 
-        volumen_fuerte = volume.iloc[-1] > volume.rolling(20).mean().iloc[-1] * 1.5
+        media_volumen = volume.rolling(20).mean().iloc[-1]
+        volumen_actual = volume.iloc[-1]
+        volumen_fuerte = volumen_actual > media_volumen * 1.5
+
+        # 🔍 Volumen proporcional
+        multiplicador = volumen_actual / media_volumen if media_volumen > 0 else 1
+        if multiplicador >= 2:
+            señales.append("📊 Volumen x2 o más")
+            vol_score = 15
+        elif multiplicador >= 1.5:
+            señales.append("📊 Volumen moderadamente alto")
+            vol_score = 10
+        elif multiplicador >= 1.2:
+            señales.append("📊 Volumen ligeramente alto")
+            vol_score = 5
+        else:
+            vol_score = 0
 
         precio_actual = close.iloc[-1]
         minimo_reciente = low[-6:-1].min()
@@ -270,7 +286,6 @@ def analizar_intradía(ticker):
             tiempo_estimado = "N/A"
         else:
             rr = round(recompensa / riesgo, 2)
-
             velas = close[-6:]
             cambios = velas.diff().dropna()
 
@@ -279,13 +294,11 @@ def analizar_intradía(ticker):
             else:
                 velocidad = abs(cambios[cambios < 0].mean())
 
-            if velocidad is not None and isinstance(velocidad, (float, int)) and velocidad > 0:
-                tiempo_estimado = round((recompensa / velocidad) * 5)
-            else:
-                tiempo_estimado = "N/A"
+            tiempo_estimado = round((recompensa / velocidad) * 5) if velocidad and velocidad > 0 else "N/A"
 
         prob_sube = prob_baja = 0
 
+        # Señales principales
         if cruce_ema == "Cruce alcista EMA9/21":
             señales.append("📈 Cruce alcista EMA9/21")
             prob_sube += 30
@@ -300,10 +313,33 @@ def analizar_intradía(ticker):
             señales.append("🔼 RSI en sobrecompra")
             prob_baja += 20
 
-        if volumen_fuerte:
-            señales.append("🔥 Volumen inusualmente alto")
-            prob_sube += 10
-            prob_baja += 10
+        # Volumen influye en ambas direcciones
+        prob_sube += vol_score
+        prob_baja += vol_score
+
+        # Última vela fuerte o débil
+        ultima = df.iloc[-1]
+        cuerpo = abs(ultima["Close"] - ultima["Open"])
+        rango = ultima["High"] - ultima["Low"]
+        fuerza = cuerpo / rango if rango > 0 else 0
+
+        if ultima["Close"] > ultima["Open"]:
+            if fuerza > 0.6:
+                señales.append("🟩 Vela alcista fuerte")
+                prob_sube += 10
+            elif fuerza > 0.3:
+                señales.append("🟩 Vela alcista moderada")
+                prob_sube += 5
+        elif ultima["Close"] < ultima["Open"]:
+            if fuerza > 0.6:
+                señales.append("🟥 Vela bajista fuerte")
+                prob_baja += 10
+            elif fuerza > 0.3:
+                señales.append("🟥 Vela bajista moderada")
+                prob_baja += 5
+
+        # La dirección se mantiene como antes
+        direccion = "subida" if prob_sube >= prob_baja else "bajada"
 
         return {
             "señales": señales,
@@ -311,7 +347,7 @@ def analizar_intradía(ticker):
             "prob_baja": prob_baja,
             "rr": rr,
             "tiempo_estimado": tiempo_estimado,
-            "direccion": "subida" if prob_sube >= prob_baja else "bajada"
+            "direccion": direccion
         }, df
 
     except Exception as e:
@@ -366,16 +402,35 @@ if es_mercado_abierto():
             entrada = diario["precio"]
             atr = diario["atr"]
 
-            # Parámetros de riesgo y beneficio
-            max_pct_stop = 0.015   # 1.5%
-            min_pct_tp   = 0.009   # 0.9%
-            max_pct_tp   = 0.02    # 2%
+            # Validación y corrección si el precio está desfasado (>1%)
+            try:
+                historial = yf.Ticker(ticker).history(period="1d", interval="1m")
+                if historial.empty or "Close" not in historial.columns:
+                    print(f"⚠️ {ticker} sin datos recientes para validación de precio.")
+                    continue
 
-            # Distancias
-            max_stop_dist = entrada * max_pct_stop
-            stop_dist = min(atr, max_stop_dist)
-            tp_dist = stop_dist * 1.5
-            tp_dist = min(max(entrada * min_pct_tp, tp_dist), entrada * max_pct_tp)
+                precio_actual = historial["Close"].iloc[-1]
+                diff_pct = abs(entrada - precio_actual) / precio_actual * 100
+
+                if diff_pct > 1:
+                    print(f"⚠️ {ticker}: entrada ajustada de {entrada} → {round(precio_actual, 2)} (desviación de {round(diff_pct, 2)}%)")
+                    entrada = round(precio_actual, 2)
+            except Exception as e:
+                print(f"❌ Error obteniendo precio actual de {ticker}: {e}")
+                continue
+
+            # SL y TP fijos adaptados a cuenta fondeada
+            sl_pct = 0.002  # 0.2%
+            tp_pct = 0.003  # 0.3%
+
+            # Medidas absolutas
+            stop_dist = entrada * sl_pct
+            tp_dist = entrada * tp_pct
+
+            # ❌ Filtro de volatilidad: si el ATR > 1.5% del precio, descartar
+            if atr > entrada * 0.015:
+                print(f"⚠️ {ticker} descartado por alta volatilidad: ATR {atr} > 1.5% del precio ({entrada})")
+                continue
 
             # Dirección
             if intradia["direccion"] == "subida":
@@ -388,6 +443,11 @@ if es_mercado_abierto():
             # Porcentajes
             stop_pct = abs(entrada - stop) / entrada * 100
             tp_pct = abs(take_profit - entrada) / entrada * 100
+
+            # ❌ Filtro 2: riesgo real (SL) superior al 2%
+            if stop_pct > 2:
+                print(f"⚠️ {ticker} descartado por SL elevado: {round(stop_pct, 2)}%")
+                continue
 
             # Validar que la recompensa sea mayor al riesgo
             if tp_pct < stop_pct * 1.33:
