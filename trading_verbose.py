@@ -392,7 +392,14 @@ candidatos = []
 CRIPTOS = ["ETH-USD", "SOL-USD"]
 OTROS = [s for s in SYMBOLS if s not in CRIPTOS]
 
-if es_mercado_abierto(): 
+if es_mercado_abierto():
+ahora = datetime.utcnow()
+print(f"🕒 Hora actual UTC: {ahora.strftime('%H:%M:%S')} | Día de la semana (0=lunes): {ahora.weekday()}")
+
+if not es_mercado_abierto():
+    print("🚫 El mercado está cerrado. El análisis no se ejecutará.")
+else:
+    print("✅ El mercado está abierto. Se iniciará el análisis.")
     for ticker in SYMBOLS:
         print(f"🔍 Evaluando {ticker}...")
         diario = analizar_tecnico_diario(ticker)
