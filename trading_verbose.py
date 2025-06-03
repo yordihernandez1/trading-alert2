@@ -358,9 +358,13 @@ def enviar_telegram(mensaje):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
     try:
-        requests.post(url, data=payload, timeout=10)
+        res = requests.post(url, data=payload, timeout=10)
+        if res.status_code != 200:
+            print(f"⚠️ Error al enviar mensaje Telegram: {res.status_code} - {res.text}")
+        else:
+            print("✅ Mensaje enviado correctamente a Telegram.")
     except Exception as e:
-        print("⚠️ Error enviando mensaje:", e)
+        print("⚠️ Error enviando mensaje a Telegram:", e)
 
 def enviar_imagen(path):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
@@ -400,11 +404,13 @@ if es_mercado_abierto():
         print("🚫 El mercado está cerrado. El análisis no se ejecutará.")
     else:
         print("✅ El mercado está abierto. Se iniciará el análisis.")
+        print(f"📋 Tickers a evaluar: {len(SYMBOLS)} → {SYMBOLS}")
 
     for ticker in SYMBOLS:
         print(f"🔍 Evaluando {ticker}...")
         diario = analizar_tecnico_diario(ticker)
         intradia, df = analizar_intradía(ticker)
+        print(f"🔎 Procesando {ticker}...")
         
         if diario and intradia:
             entrada = diario["precio"]
@@ -497,9 +503,12 @@ if es_mercado_abierto():
             })
 
             print(f"✅ Análisis completo para {ticker}")
+            print(f"🧮 Candidatos acumulados: {len(candidatos)}")
 
     minutos_alerta = tiempo_desde_ultima_alerta()
     minutos_resumen = tiempo_desde_ultimo_resumen()
+    print(f"⏱ Min desde última alerta: {minutos_alerta}")
+    print(f"📊 Min desde último resumen: {minutos_resumen}")
 
     if minutos_alerta >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= minutos_alerta and candidatos:
         resumen = "\n".join([
@@ -508,6 +517,7 @@ if es_mercado_abierto():
             if c.get("intradia") is not None and c["intradia"].get("direccion") is not None
         ])
         enviar_telegram(f"📊 *Resumen de oportunidades*\n\n{resumen}")
+        print("📤 Enviando resumen de oportunidades a Telegram...")
         registrar_resumen()
 
     if candidatos:
@@ -551,6 +561,9 @@ if es_mercado_abierto():
 """
 
             enviar_telegram(mensaje)
+            print("🚨 Enviando mejor oportunidad a Telegram...")
             registrar_alerta()
             img_path = generar_grafico(mejor["df"], mejor["ticker"])
             enviar_imagen(img_path)
+
+            enviar_telegram
