@@ -3,19 +3,43 @@ import yfinance as yf
 import ta
 import requests
 import numpy as np
+import logging
+import json
+from pathlib import Path
+from datetime import datetime, time
+
 import matplotlib.pyplot as plt
 from datetime import datetime
+import numpy as np
+import requests
+import ta
+import yfinance as yf
 from bs4 import BeautifulSoup
+
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import json
 from pathlib import Path
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.FileHandler("bot.log"),
+        logging.StreamHandler(),
+    ],
+)
+logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 if not BOT_TOKEN:
     raise ValueError("❌ BOT_TOKEN no está definido. Asegúrate de configurarlo como variable de entorno.")
+    logger.error("BOT_TOKEN no está definido. Asegúrate de configurarlo como variable de entorno.")
+    raise ValueError("BOT_TOKEN no definido")
 if not CHAT_ID:
     raise ValueError("❌ CHAT_ID no está definido. Asegúrate de configurarlo como variable de entorno.")
+    logger.error("CHAT_ID no está definido. Asegúrate de configurarlo como variable de entorno.")
+    raise ValueError("CHAT_ID no definido")
 
 SYMBOLS = [
     # ACCIONES VOLÁTILES
@@ -52,10 +76,12 @@ TIEMPO_RESUMEN_MINUTOS = 30
 def registrar_alerta():
     try:
         print("📝 Registrando alerta en ultima_alerta.json...")
+        logger.info("Registrando alerta en %s", LOG_ALERTA)
         with open(LOG_ALERTA, "w") as f:
             json.dump({"ultima": datetime.utcnow().isoformat()}, f)
     except Exception as e:
         print(f"⚠️ No se pudo registrar la alerta: {e}")
+        logger.warning("No se pudo registrar la alerta: %s", e)
 
 def tiempo_desde_ultima_alerta():
     path = Path(LOG_ALERTA)
@@ -70,9 +96,11 @@ def tiempo_desde_ultima_alerta():
         ultima = datetime.fromisoformat(ultima_raw)
         delta = (datetime.utcnow() - ultima).total_seconds() / 60
         print(f"⏱ Última alerta enviada hace {int(delta)} minutos.")
+        logger.info("Última alerta enviada hace %s minutos", int(delta))
         return delta
     except Exception as e:
         print(f"⚠️ Error leyendo archivo de alerta: {e}")
+        logger.warning("Error leyendo archivo de alerta: %s", e)
         return 9999
 
 LOG_RESUMEN = "ultimo_resumen.json"
@@ -83,6 +111,7 @@ def registrar_resumen():
             json.dump({"ultimo": datetime.utcnow().isoformat()}, f)
     except Exception as e:
         print(f"⚠️ No se pudo registrar el resumen: {e}")
+        logger.warning("No se pudo registrar el resumen: %s", e)
 
 def tiempo_desde_ultimo_resumen():
     path = Path(LOG_RESUMEN)
@@ -97,9 +126,11 @@ def tiempo_desde_ultimo_resumen():
         ultimo = datetime.fromisoformat(ultimo_raw)
         delta = (datetime.utcnow() - ultimo).total_seconds() / 60
         print(f"📊 Último resumen enviado hace {int(delta)} minutos.")
+        logger.info("Último resumen enviado hace %s minutos", int(delta))
         return delta
     except Exception as e:
         print(f"⚠️ Error leyendo archivo de resumen: {e}")
+        logger.warning("Error leyendo archivo de resumen: %s", e)
         return 9999
 
 def encontrar_soporte_resistencia(close, periodo=14):
@@ -132,12 +163,14 @@ def get_news_headlines(ticker, num_headlines=3):
         res = requests.get(url, headers=headers, timeout=7)
         if res.status_code != 200:
             print(f"⚠️ Error al buscar noticias de {ticker} - status {res.status_code}")
+            logger.warning("Error al buscar noticias de %s - status %s", ticker, res.status_code)
             return []
 
         soup = BeautifulSoup(res.text, 'html.parser')
         containers = soup.select('div.dbsr')
         if not containers:
             print(f"⚠️ No se encontraron titulares para {ticker}.")
+            logger.warning("No se encontraron titulares para %s", ticker)
             return []
 
         headlines = []
@@ -150,6 +183,7 @@ def get_news_headlines(ticker, num_headlines=3):
 
     except Exception as e:
         print(f"⚠️ Error al obtener noticias para {ticker}: {e}")
+        logger.warning("Error al obtener noticias para %s: %s", ticker, e)
         return []
 
 def get_news_headlines_bing(ticker, num_headlines=3):
@@ -162,9 +196,11 @@ def get_news_headlines_bing(ticker, num_headlines=3):
         headlines = [item.text.strip() for item in items if item.text.strip()]
         if not headlines:
             print(f"⚠️ No se encontraron titulares en Bing para {ticker}")
+            logger.warning("No se encontraron titulares en Bing para %s", ticker)
         return headlines
     except Exception as e:
         print(f"⚠️ Error en Bing News ({ticker}): {e}")
+        logger.warning("Error en Bing News (%s): %s", ticker, e)
         return []
 
 def analizar_sentimiento_vader(titulares):
@@ -190,10 +226,7 @@ def analizar_tecnico_diario(ticker):
         macd = ta.trend.MACD(close)
         sma_50 = ta.trend.SMAIndicator(close, window=50).sma_indicator()
         sma_200 = ta.trend.SMAIndicator(close, window=200).sma_indicator()
-        atr = ta.volatility.AverageTrueRange(high, low, close).average_true_range()
-        tendencia = "Alcista" if close.iloc[-1] > close.iloc[-10] else "Bajista"
-        soporte, resistencia = encontrar_soporte_resistencia(close)
-
+@@ -197,51 +212,51 @@ def analizar_tecnico_diario(ticker):
         señales = []
         if rsi.iloc[-1] > RSI_SOBRECOMPRA:
             señales.append("RSI en sobrecompra")
@@ -220,6 +253,7 @@ def analizar_tecnico_diario(ticker):
         }
     except Exception as e:
         print(f"❌ Error en análisis diario de {ticker}: {e}")
+        logger.error("Error en análisis diario de %s: %s", ticker, e)
         return None
 
 def analizar_intradía(ticker):
@@ -245,87 +279,7 @@ def analizar_intradía(ticker):
             cruce_ema = "Cruce alcista EMA9/21"
         elif ema9.iloc[-2] > ema21.iloc[-2] and ema9.iloc[-1] < ema21.iloc[-1]:
             cruce_ema = "Cruce bajista EMA9/21"
-
-        rsi_val = rsi.iloc[-1]
-        if rsi_val >= RSI_SOBRECOMPRA:
-            zona_rsi = "Sobrecompra"
-        elif rsi_val <= RSI_SOBREVENTA:
-            zona_rsi = "Sobreventa"
-        else:
-            zona_rsi = "Neutral"
-
-        señales.append(f"RSI en zona {zona_rsi.lower()} ({round(rsi_val, 1)})")
-
-        media_volumen = volume.rolling(20).mean().iloc[-1]
-        volumen_actual = volume.iloc[-1]
-        volumen_fuerte = volumen_actual > media_volumen * 1.5
-
-        # 🔍 Volumen proporcional
-        multiplicador = volumen_actual / media_volumen if media_volumen > 0 else 1
-        if multiplicador >= 2:
-            señales.append("📊 Volumen x2 o más")
-            vol_score = 15
-        elif multiplicador >= 1.5:
-            señales.append("📊 Volumen moderadamente alto")
-            vol_score = 10
-        elif multiplicador >= 1.2:
-            señales.append("📊 Volumen ligeramente alto")
-            vol_score = 5
-        else:
-            vol_score = 0
-
-        precio_actual = close.iloc[-1]
-        minimo_reciente = low[-6:-1].min()
-        maximo_esperado = high[-6:].max()
-
-        riesgo = round(precio_actual - minimo_reciente, 2)
-        recompensa = round(maximo_esperado - precio_actual, 2)
-
-        if riesgo <= 0 or recompensa <= 0:
-            rr = "No válido"
-            tiempo_estimado = "N/A"
-        else:
-            rr = round(recompensa / riesgo, 2)
-            velas = close[-6:]
-            cambios = velas.diff().dropna()
-
-            if cruce_ema == "Cruce alcista EMA9/21":
-                velocidad = cambios[cambios > 0].mean()
-            else:
-                velocidad = abs(cambios[cambios < 0].mean())
-
-            tiempo_estimado = round((recompensa / velocidad) * 5) if velocidad and velocidad > 0 else "N/A"
-
-        prob_sube = prob_baja = 0
-
-        # Señales principales
-        if cruce_ema == "Cruce alcista EMA9/21":
-            señales.append("📈 Cruce alcista EMA9/21")
-            prob_sube += 30
-        elif cruce_ema == "Cruce bajista EMA9/21":
-            señales.append("📉 Cruce bajista EMA9/21")
-            prob_baja += 30
-
-        if zona_rsi == "Sobreventa":
-            señales.append("🔽 RSI en sobreventa")
-            prob_sube += 20
-        elif zona_rsi == "Sobrecompra":
-            señales.append("🔼 RSI en sobrecompra")
-            prob_baja += 20
-
-        # Volumen influye en ambas direcciones
-        prob_sube += vol_score
-        prob_baja += vol_score
-
-        # Última vela fuerte o débil
-        ultima = df.iloc[-1]
-        cuerpo = abs(ultima["Close"] - ultima["Open"])
-        rango = ultima["High"] - ultima["Low"]
-        fuerza = cuerpo / rango if rango > 0 else 0
-
-        if ultima["Close"] > ultima["Open"]:
-            if fuerza > 0.6:
-                señales.append("🟩 Vela alcista fuerte")
+@@ -329,241 +344,263 @@ def analizar_intradía(ticker):
                 prob_sube += 10
             elif fuerza > 0.3:
                 señales.append("🟩 Vela alcista moderada")
@@ -352,6 +306,7 @@ def analizar_intradía(ticker):
 
     except Exception as e:
         print(f"❌ Error intradía {ticker}: {e}")
+        logger.error("Error intradía %s: %s", ticker, e)
         return None, None
 
 def enviar_telegram(mensaje):
@@ -361,15 +316,26 @@ def enviar_telegram(mensaje):
         res = requests.post(url, data=payload, timeout=10)
         if res.status_code != 200:
             print(f"⚠️ Error al enviar mensaje Telegram: {res.status_code} - {res.text}")
+            logger.warning("Error al enviar mensaje Telegram: %s - %s", res.status_code, res.text)
         else:
             print("✅ Mensaje enviado correctamente a Telegram.")
+            logger.info("Mensaje enviado correctamente a Telegram")
     except Exception as e:
         print("⚠️ Error enviando mensaje a Telegram:", e)
+        logger.error("Error enviando mensaje a Telegram: %s", e)
 
 def enviar_imagen(path):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendPhoto"
     with open(path, "rb") as photo:
         requests.post(url, files={"photo": photo}, data={"chat_id": CHAT_ID})
+        try:
+            res = requests.post(url, files={"photo": photo}, data={"chat_id": CHAT_ID}, timeout=10)
+            if res.status_code != 200:
+                logger.warning("Error al enviar imagen a Telegram: %s - %s", res.status_code, res.text)
+            else:
+                logger.info("Imagen enviada correctamente a Telegram")
+        except Exception as e:
+            logger.error("Error enviando imagen a Telegram: %s", e)
 
 def generar_grafico(df, ticker):
     plt.figure(figsize=(10, 4))
@@ -399,18 +365,24 @@ OTROS = [s for s in SYMBOLS if s not in CRIPTOS]
 if es_mercado_abierto():
     ahora = datetime.utcnow()
     print(f"🕒 Hora actual UTC: {ahora.strftime('%H:%M:%S')} | Día de la semana (0=lunes): {ahora.weekday()}")
+    logger.info("Hora actual UTC: %s | Día de la semana: %s", ahora.strftime('%H:%M:%S'), ahora.weekday())
 
     if not es_mercado_abierto():
         print("🚫 El mercado está cerrado. El análisis no se ejecutará.")
+        logger.info("El mercado está cerrado. El análisis no se ejecutará")
     else:
         print("✅ El mercado está abierto. Se iniciará el análisis.")
         print(f"📋 Tickers a evaluar: {len(SYMBOLS)} → {SYMBOLS}")
+        logger.info("El mercado está abierto. Se iniciará el análisis")
+        logger.info("Tickers a evaluar: %s → %s", len(SYMBOLS), SYMBOLS)
 
     for ticker in SYMBOLS:
         print(f"🔍 Evaluando {ticker}...")
+        logger.info("Evaluando %s", ticker)
         diario = analizar_tecnico_diario(ticker)
         intradia, df = analizar_intradía(ticker)
         print(f"🔎 Procesando {ticker}...")
+        logger.info("Procesando %s", ticker)
         
         if diario and intradia:
             entrada = diario["precio"]
@@ -421,6 +393,7 @@ if es_mercado_abierto():
                 historial = yf.Ticker(ticker).history(period="1d", interval="1m")
                 if historial.empty or "Close" not in historial.columns:
                     print(f"⚠️ {ticker} sin datos recientes para validación de precio.")
+                    logger.warning("%s sin datos recientes para validación de precio", ticker)
                     continue
 
                 precio_actual = historial["Close"].iloc[-1]
@@ -428,9 +401,17 @@ if es_mercado_abierto():
 
                 if diff_pct > 1:
                     print(f"⚠️ {ticker}: entrada ajustada de {entrada} → {round(precio_actual, 2)} (desviación de {round(diff_pct, 2)}%)")
+                    logger.info(
+                        "%s: entrada ajustada de %s → %s (desviación de %.2f%%)",
+                        ticker,
+                        entrada,
+                        round(precio_actual, 2),
+                        round(diff_pct, 2),
+                    )
                     entrada = round(precio_actual, 2)
             except Exception as e:
                 print(f"❌ Error obteniendo precio actual de {ticker}: {e}")
+                logger.error("Error obteniendo precio actual de %s: %s", ticker, e)
                 continue
 
             # SL y TP fijos adaptados a cuenta fondeada
@@ -444,6 +425,7 @@ if es_mercado_abierto():
             # ❌ Filtro de volatilidad: si el ATR > 1.5% del precio, descartar
             if atr > entrada * 0.015:
                 print(f"⚠️ {ticker} descartado por alta volatilidad: ATR {atr} > 1.5% del precio ({entrada})")
+                logger.info("%s descartado por alta volatilidad: ATR %.2f > 1.5%% del precio (%.2f)", ticker, atr, entrada)
                 continue
 
             # Dirección
@@ -461,11 +443,13 @@ if es_mercado_abierto():
             # ❌ Filtro 2: riesgo real (SL) superior al 2%
             if stop_pct > 2:
                 print(f"⚠️ {ticker} descartado por SL elevado: {round(stop_pct, 2)}%")
+                logger.info("%s descartado por SL elevado: %.2f%%", ticker, round(stop_pct, 2))
                 continue
 
             # Validar que la recompensa sea mayor al riesgo
             if tp_pct < stop_pct * 1.33:
                 print(f"⚠️ {ticker} descartado: TP ({round(tp_pct, 2)}%) < 1.33x SL ({round(stop_pct, 2)}%)")
+                logger.info("%s descartado: TP (%.2f%%) < 1.33x SL (%.2f%%)", ticker, round(tp_pct, 2), round(stop_pct, 2))
                 continue
 
             # Señales adicionales
@@ -488,6 +472,13 @@ if es_mercado_abierto():
             raw_prob_total = max(intradia["prob_sube"], intradia["prob_baja"])
             prob_total = int((raw_prob_total / 40) * 100)
             print(f"📊 {ticker} - Prob sube: {intradia['prob_sube']} | Prob baja: {intradia['prob_baja']} | Total: {prob_total}%")
+            logger.info(
+                "%s - Prob sube: %s | Prob baja: %s | Total: %s%%",
+                ticker,
+                intradia["prob_sube"],
+                intradia["prob_baja"],
+                prob_total,
+            )
 
             candidatos.append({
                 "ticker": ticker,
@@ -504,11 +495,15 @@ if es_mercado_abierto():
 
             print(f"✅ Análisis completo para {ticker}")
             print(f"🧮 Candidatos acumulados: {len(candidatos)}")
+            logger.info("Análisis completo para %s", ticker)
+            logger.info("Candidatos acumulados: %s", len(candidatos))
 
     minutos_alerta = tiempo_desde_ultima_alerta()
     minutos_resumen = tiempo_desde_ultimo_resumen()
     print(f"⏱ Min desde última alerta: {minutos_alerta}")
     print(f"📊 Min desde último resumen: {minutos_resumen}")
+    logger.info("Min desde última alerta: %s", minutos_alerta)
+    logger.info("Min desde último resumen: %s", minutos_resumen)
 
     if minutos_alerta >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= minutos_alerta and candidatos:
         resumen = "\n".join([
@@ -518,6 +513,7 @@ if es_mercado_abierto():
         ])
         enviar_telegram(f"📊 *Resumen de oportunidades*\n\n{resumen}")
         print("📤 Enviando resumen de oportunidades a Telegram...")
+        logger.info("Enviando resumen de oportunidades a Telegram")
         registrar_resumen()
 
     if candidatos:
@@ -533,6 +529,7 @@ if es_mercado_abierto():
             titulares = get_news_headlines(mejor["ticker"])
             if not titulares:
                 print("🔁 Usando Bing como respaldo para titulares.")
+                logger.info("Usando Bing como respaldo para titulares")
                 titulares = get_news_headlines_bing(mejor["ticker"])
 
             resumen_noticia = analizar_sentimiento_vader(titulares)
@@ -562,8 +559,11 @@ if es_mercado_abierto():
 
             enviar_telegram(mensaje)
             print("🚨 Enviando mejor oportunidad a Telegram...")
+            logger.info("Enviando mejor oportunidad a Telegram")
             registrar_alerta()
             img_path = generar_grafico(mejor["df"], mejor["ticker"])
             enviar_imagen(img_path)
-
-            enviar_telegram
+        else:
+            logger.info("Ningún candidato supera el umbral de alerta")
+    else:
+        logger.info("No hay candidatos para enviar")
