@@ -316,12 +316,15 @@ if __name__ == "__main__":
     minutos_resumen = tiempo_desde_ultimo_resumen()
 
     if minutos_alerta >= TIEMPO_RESUMEN_MINUTOS and minutos_resumen >= minutos_alerta and candidatos:
-    resumen = "\n".join([
+    resumen = "
+".join([
         f"{c['ticker']} | Prob: {c['prob_total']}% | Dirección: {'↑' if c['intradia']['direccion'] == 'subida' else '↓'} | TP: {c['tp_pct']}% | SL: {c['stop_pct']}%"
         for c in sorted(candidatos, key=lambda x: x["prob_total"], reverse=True)
     ])
-    enviar_telegram(f"📊 *Resumen de oportunidades*\n\n{resumen}")
-        registrar_resumen()
+    enviar_telegram(f"📊 *Resumen de oportunidades*
+
+{resumen}")
+    registrar_resumen()
 
     if candidatos:
         mejor = max(candidatos, key=lambda x: x["prob_total"])
