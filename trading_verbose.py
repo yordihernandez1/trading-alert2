@@ -67,7 +67,6 @@ SYMBOLS = [
     # MATERIAS PRIMAS
     "GC=F"      # Oro
 ]
-@@ -204,51 +195,53 @@ def get_news_headlines_bing(ticker, num_headlines=3):
 
 RSI_SOBRECOMPRA = 70
 RSI_SOBREVENTA = 30
@@ -216,7 +215,6 @@ def analizar_tecnico_diario(ticker):
         macd = ta.trend.MACD(close)
         sma_50 = ta.trend.SMAIndicator(close, window=50).sma_indicator()
         sma_200 = ta.trend.SMAIndicator(close, window=200).sma_indicator()
-@@ -197,51 +212,51 @@ def analizar_tecnico_diario(ticker):
         atr = ta.volatility.AverageTrueRange(high, low, close).average_true_range()
         tendencia = "Alcista" if close.iloc[-1] > close.iloc[-10] else "Bajista"
         soporte, resistencia = encontrar_soporte_resistencia(close)
@@ -246,7 +244,6 @@ def analizar_tecnico_diario(ticker):
             "señales": señales
         }
     except Exception as e:
-@@ -257,80 +250,159 @@ def analizar_tecnico_diario(ticker):
         print(f"❌ Error en análisis diario de {ticker}: {e}")
         return None
 
@@ -273,7 +270,6 @@ def analizar_intradía(ticker):
             cruce_ema = "Cruce alcista EMA9/21"
         elif ema9.iloc[-2] > ema21.iloc[-2] and ema9.iloc[-1] < ema21.iloc[-1]:
             cruce_ema = "Cruce bajista EMA9/21"
-@@ -329,241 +344,263 @@ def analizar_intradía(ticker):
 
         rsi_val = rsi.iloc[-1]
         if rsi_val >= RSI_SOBRECOMPRA:
@@ -299,7 +295,6 @@ def analizar_intradía(ticker):
             vol_score = 10
         elif multiplicador >= 1.2:
             señales.append("📊 Volumen ligeramente alto")
-@@ -234,53 +330,219 @@ def analizar_intradía(ticker):
             elif fuerza > 0.3:
                 señales.append("🟩 Vela alcista moderada")
                 prob_sube += 5
