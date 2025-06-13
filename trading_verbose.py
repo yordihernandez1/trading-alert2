@@ -324,6 +324,8 @@ if __name__ == "__main__":
     enviar_telegram(f"📊 *Resumen de oportunidades*
 
 {resumen}")
+
+{resumen}")
     registrar_resumen()
 
     if candidatos:
