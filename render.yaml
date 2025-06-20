@@ -1,7 +1,12 @@
 services:
   - type: cron
-    name: trading-alerts
+    name: trading-alert-bot
     env: python
-    schedule: "30 13 * * *"  # ejecuta cada día a las 13:30 UTC
-    buildCommand: pip install -r requirements.txt
-    startCommand: python trading_verbose.py
+    schedule: "*/5 * * * *"  # cada 5 minutos
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python main.py"
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: CHAT_ID
+        sync: false
