@@ -1,9 +1,0 @@
-yfinance
-pandas
-numpy
-matplotlib
-ta
-requests
-beautifulsoup4
-nltk
-python-telegram-bot==13.15
