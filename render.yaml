@@ -1,0 +1,12 @@
+services:
+  - type: cron
+    name: trading-alert-bot
+    env: python
+    schedule: "*/5 * * * *"
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python main.py"
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: CHAT_ID
+        sync: false
