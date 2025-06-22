@@ -123,18 +123,12 @@ def run_alert_bot():
         sentiment = analyze_sentiment(symbol)
         chart = plot_chart(intraday['df'], symbol)
         text = (
-            f"📈 *Alerta de Trading: {symbol}*
-"
-            f"Precio: {entry:.2f}
-"
-            f"SL: {stop:.2f} | TP: {target:.2f}
-"
-            f"Riesgo/Recompensa: {rr:.2f}
-"
-            f"RSI: {daily['rsi']:.1f} | MACD: {daily['macd']:.2f}
-"
-            f"Tendencia: {daily['trend']}
-"
+            f"📈 Alerta de Trading: {symbol}\n"
+            f"Precio: {entry:.2f}\n"
+            f"SL: {stop:.2f} | TP: {target:.2f}\n"
+            f"Riesgo/Recompensa: {rr:.2f}\n"
+            f"RSI: {daily['rsi']:.1f} | MACD: {daily['macd']:.2f}\n"
+            f"Tendencia: {daily['trend']}\n"
             f"Sentimiento de noticias: {sentiment}"
         )
         send_telegram_alert(text, chart)
